@@ -92,4 +92,6 @@ jobs:
       # the executable is present and keeps its shebang, THIRD_PARTY_NOTICES
       # is included, dist/metafile-*.json is excluded, and nothing stray rode
       # along. See packages/cli/scripts/verify-pack.ts for the checks.
-      - run: pnpm --filter @nat-ui/cli run verify-pack
+      # `--fail-if-no-match` because a filter that matches nothing exits 0,
+      # which would quietly turn this guard into a no-op that still reports green.
+      - run: pnpm --filter @nat-ui/cli --fail-if-no-match run verify-pack
