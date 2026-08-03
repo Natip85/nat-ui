@@ -30,11 +30,19 @@ describe('spawnInstall', () => {
     )
   })
 
-  test('reports the signal, not "code null", when the child is killed by a signal', async () => {
-    const script = join(tempDir, 'kill-self.js')
-    await writeFile(script, 'process.kill(process.pid, "SIGTERM")', 'utf8')
-    await expect(spawnInstall(process.execPath, [script], process.cwd())).rejects.toThrow(/SIGTERM/)
-  })
+  // Windows has no POSIX signal delivery: `process.kill` there is TerminateProcess,
+  // so the child reports an exit code rather than a signal and the case above
+  // already covers it. Only a real signal can exercise this branch.
+  test.skipIf(process.platform === 'win32')(
+    'reports the signal, not "code null", when the child is killed by a signal',
+    async () => {
+      const script = join(tempDir, 'kill-self.js')
+      await writeFile(script, 'process.kill(process.pid, "SIGTERM")', 'utf8')
+      await expect(spawnInstall(process.execPath, [script], process.cwd())).rejects.toThrow(
+        /SIGTERM/,
+      )
+    },
+  )
 
   test('rejects when the binary cannot be found at all', async () => {
     await expect(
