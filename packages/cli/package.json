@@ -42,6 +42,7 @@
     "@clack/prompts": "catalog:",
     "@nat-ui/schema": "workspace:*",
     "@types/node": "catalog:",
+    "jsonc-parser": "catalog:",
     "tsup": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

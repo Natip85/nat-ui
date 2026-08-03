@@ -1,5 +1,6 @@
 import {readdir} from 'node:fs/promises'
 import {join} from 'node:path'
+import {type ParseError, parse as parseJsonc} from 'jsonc-parser'
 import {directoryExists, fileExists, readText} from '../fs/read-text'
 import {detectPackageManager, type PackageManager} from './package-manager'
 
@@ -24,6 +25,13 @@ export const CSS_CANDIDATES = [
 
 const DEFAULT_ALIAS_PREFIX = '@'
 
+const asRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+
+const asOptionalRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
+
+/** `package.json` is strict JSON by spec, so this deliberately does not tolerate comments. */
 const readJson = async (path: string): Promise<Record<string, unknown> | undefined> => {
   const text = await readText(path)
   if (text === undefined) return undefined
@@ -31,16 +39,30 @@ const readJson = async (path: string): Promise<Record<string, unknown> | undefin
   try {
     const parsed: unknown = JSON.parse(text)
 
-    return typeof parsed === 'object' && parsed !== null
-      ? (parsed as Record<string, unknown>)
-      : undefined
+    return asOptionalRecord(parsed)
   } catch {
     return undefined
   }
 }
 
-const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+/**
+ * `tsconfig.json` is JSONC (comments and trailing commas are legal, and common
+ * in real projects), so this uses the same tolerant parser VS Code does
+ * rather than `JSON.parse`. `jsonc-parser` is fault-tolerant by design: on
+ * genuinely malformed input it still returns a best-effort partial value
+ * instead of throwing, so a non-empty error list — not a truthy result — is
+ * what distinguishes "malformed" from "valid with comments".
+ */
+const readJsonc = async (path: string): Promise<Record<string, unknown> | undefined> => {
+  const text = await readText(path)
+  if (text === undefined) return undefined
+
+  const errors: ParseError[] = []
+  const parsed: unknown = parseJsonc(text, errors, {allowTrailingComma: true}) as unknown
+  if (errors.length > 0) return undefined
+
+  return asOptionalRecord(parsed)
+}
 
 const findStylesheet = async (cwd: string): Promise<string | undefined> => {
   for (const candidate of CSS_CANDIDATES) {
@@ -72,7 +94,7 @@ export const detectProject = async (
   env: NodeJS.ProcessEnv,
 ): Promise<DetectedProject> => {
   const pkg = await readJson(join(cwd, 'package.json'))
-  const tsconfig = await readJson(join(cwd, 'tsconfig.json'))
+  const tsconfig = await readJsonc(join(cwd, 'tsconfig.json'))
 
   const hasPackageJson = await fileExists(join(cwd, 'package.json'))
   const hasTsconfig = await fileExists(join(cwd, 'tsconfig.json'))

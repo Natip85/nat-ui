@@ -97,4 +97,35 @@ describe('detectProject', () => {
     expect(detected.rsc).toBe(false)
     expect(detected.aliasPrefix).toBe('@')
   })
+
+  test('parses a tsconfig.json with comments and a trailing comma', async () => {
+    await write('package.json', '{}')
+    await write(
+      'tsconfig.json',
+      [
+        '{',
+        '  // this project aliases everything to "~"',
+        '  "compilerOptions": {',
+        '    "paths": {',
+        '      "~/*": ["./src/*"],',
+        '    },',
+        '  },',
+        '}',
+      ].join('\n'),
+    )
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.aliasPrefix).toBe('~')
+  })
+
+  test('falls back to the default prefix for a tsconfig with a genuine syntax error', async () => {
+    await write('package.json', '{}')
+    await write('tsconfig.json', '{ "compilerOptions": { paths not valid at all')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasTsconfig).toBe(true)
+    expect(detected.aliasPrefix).toBe('@')
+  })
 })
