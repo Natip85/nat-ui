@@ -1,3 +1,6 @@
+import {mkdtemp, rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
 import {describe, expect, test} from 'vitest'
 import {help, run} from './index'
 
@@ -69,5 +72,33 @@ describe('run', () => {
     expect(await run(['-z'], (message) => lines.push(message))).toBe(1)
     expect(lines.join('\n')).toContain('-z')
     expect(lines.join('\n')).toContain('Usage')
+  })
+
+  test('rejects a stray positional after init with exit code 1 and a helpful message', async () => {
+    const lines: string[] = []
+
+    expect(await run(['init', 'typo'], (message) => lines.push(message))).toBe(1)
+    expect(lines.join('\n')).toContain("'typo'")
+    expect(lines.join('\n')).toContain('Usage')
+  })
+
+  test('dispatches a bare init with no stray positionals to the init command', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'nat-ui-index-'))
+    const originalCwd = process.cwd()
+    process.chdir(cwd)
+
+    try {
+      const lines: string[] = []
+
+      // An empty directory makes real init() fail fast on its first check, which
+      // is enough to prove this reached the init pipeline rather than being
+      // rejected as a stray positional before dispatch.
+      expect(await run(['init'], (message) => lines.push(message))).toBe(1)
+      expect(lines.join('\n')).toContain('No package.json found here.')
+      expect(lines.join('\n')).not.toContain('Unknown argument')
+    } finally {
+      process.chdir(originalCwd)
+      await rm(cwd, {recursive: true, force: true})
+    }
   })
 })

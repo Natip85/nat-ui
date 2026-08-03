@@ -83,6 +83,13 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
   }
 
   if (command === 'init') {
+    const [, extra] = positionals
+    if (extra !== undefined) {
+      log(`Unknown argument: '${extra}'.\n${help}`)
+
+      return 1
+    }
+
     return init(
       {
         cwd: process.cwd(),
