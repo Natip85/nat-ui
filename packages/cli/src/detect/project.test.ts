@@ -2,7 +2,7 @@ import {mkdtemp, mkdir, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {beforeEach, describe, expect, test} from 'vitest'
-import {detectProject} from './project'
+import {detectProject, targetDirForPrefix} from './project'
 
 let cwd: string
 
@@ -159,7 +159,7 @@ describe('detectProject', () => {
 
     const detected = await detectProject(cwd, {})
 
-    expect(detected.aliasTargetDir).toBe('src')
+    expect(targetDirForPrefix(detected.aliasTargets, '@')).toBe('src')
   })
 
   test('captures a paths target that maps the alias to the project root', async () => {
@@ -168,14 +168,31 @@ describe('detectProject', () => {
 
     const detected = await detectProject(cwd, {})
 
-    expect(detected.aliasTargetDir).toBe('')
+    expect(targetDirForPrefix(detected.aliasTargets, '@')).toBe('')
   })
 
-  test('leaves the target dir undefined when there is no usable paths entry', async () => {
+  test('leaves the alias targets empty when there is no usable paths entry', async () => {
     await write('package.json', '{}')
 
     const detected = await detectProject(cwd, {})
 
-    expect(detected.aliasTargetDir).toBeUndefined()
+    expect(detected.aliasTargets).toEqual([])
+    expect(targetDirForPrefix(detected.aliasTargets, '@')).toBeUndefined()
+  })
+
+  test('captures every prefix-to-target mapping in paths, not just the first', async () => {
+    await write('package.json', '{}')
+    await write(
+      'tsconfig.json',
+      JSON.stringify({compilerOptions: {paths: {'~/*': ['./src/*'], '@/*': ['./lib/*']}}}),
+    )
+
+    const detected = await detectProject(cwd, {})
+
+    // The default prefix is still the first entry — only the target lookup
+    // needs every mapping, so a later override can find its own target.
+    expect(detected.aliasPrefix).toBe('~')
+    expect(targetDirForPrefix(detected.aliasTargets, '~')).toBe('src')
+    expect(targetDirForPrefix(detected.aliasTargets, '@')).toBe('lib')
   })
 })

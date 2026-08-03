@@ -4,6 +4,18 @@ import {type ParseError, parse as parseJsonc} from 'jsonc-parser'
 import {directoryExists, fileExists, readText} from '../fs/read-text'
 import {detectPackageManager, type PackageManager} from './package-manager'
 
+/** One `X/*` → target directory entry read out of tsconfig's `paths`. */
+export interface AliasMapping {
+  readonly prefix: string
+  /**
+   * Directory the alias root resolves to (e.g. `{"@/*": ["./src/*"]}` →
+   * `'src'`; `["./*"]` → `''` for the project root). Forward-slash
+   * normalized, relative to `cwd`. `undefined` when the `paths` value had no
+   * usable string entry to derive this from.
+   */
+  readonly targetDir: string | undefined
+}
+
 export interface DetectedProject {
   hasPackageJson: boolean
   /** True when `package.json` exists but could not be parsed as JSON. */
@@ -12,17 +24,24 @@ export interface DetectedProject {
   css: string | undefined
   aliasPrefix: string
   /**
-   * Directory the alias root resolves to, taken from the `paths` entry that
-   * supplied `aliasPrefix` (e.g. `{"@/*": ["./src/*"]}` → `'src'`; `["./*"]` →
-   * `''` for the project root). Forward-slash normalized, relative to `cwd`.
-   * `undefined` when tsconfig had no usable `paths` entry to derive this
-   * from — callers should fall back to another heuristic in that case.
+   * Every `X/*` → target mapping found in tsconfig's `paths`, in the order
+   * they appear. `aliasPrefix` is just the first entry's prefix, used as the
+   * detected default — but the user can override the prefix at the
+   * interactive prompt, so a caller that needs the target directory for
+   * whatever prefix was actually chosen must look it up here (via
+   * `targetDirForPrefix`) rather than assuming it matches this first entry.
    */
-  aliasTargetDir: string | undefined
+  aliasTargets: readonly AliasMapping[]
   tsx: boolean
   rsc: boolean
   packageManager: PackageManager
 }
+
+/** The target directory tsconfig's `paths` records for `prefix`, if any. */
+export const targetDirForPrefix = (
+  mappings: readonly AliasMapping[],
+  prefix: string,
+): string | undefined => mappings.find((mapping) => mapping.prefix === prefix)?.targetDir
 
 /** Backslashes flipped to forward slashes, so paths compare and print consistently across platforms. */
 export const toPosixPath = (path: string): string => path.replace(/\\/g, '/')
@@ -88,11 +107,6 @@ const findStylesheet = async (cwd: string): Promise<string | undefined> => {
   return undefined
 }
 
-interface AliasMapping {
-  readonly prefix: string
-  readonly targetDir: string | undefined
-}
-
 const ALIAS_KEY_PATTERN = /^(.+)\/\*$/
 const ALIAS_TARGET_PATTERN = /^(.*)\/\*$/
 
@@ -116,15 +130,16 @@ const targetDirFor = (value: unknown): string | undefined => {
   return target === undefined ? undefined : normalizeAliasTarget(target)
 }
 
-/** Reads the prefix and target directory out of the first `paths` key shaped like `X/*`. */
-const findAlias = (tsconfig: Record<string, unknown> | undefined): AliasMapping => {
+/** Reads the prefix and target directory out of every `paths` key shaped like `X/*`. */
+const findAliases = (tsconfig: Record<string, unknown> | undefined): readonly AliasMapping[] => {
   const paths = asRecord(asRecord(tsconfig?.compilerOptions).paths)
+  const mappings: AliasMapping[] = []
   for (const key of Object.keys(paths)) {
     const prefix = ALIAS_KEY_PATTERN.exec(key)?.[1]
-    if (prefix !== undefined) return {prefix, targetDir: targetDirFor(paths[key])}
+    if (prefix !== undefined) mappings.push({prefix, targetDir: targetDirFor(paths[key])})
   }
 
-  return {prefix: DEFAULT_ALIAS_PREFIX, targetDir: undefined}
+  return mappings
 }
 
 const usesNext = (pkg: Record<string, unknown> | undefined): boolean =>
@@ -144,15 +159,15 @@ export const detectProject = async (
     (await directoryExists(join(cwd, 'app'))) || (await directoryExists(join(cwd, 'src/app')))
 
   const files = await listDirectory(cwd)
-  const alias = findAlias(tsconfig)
+  const aliasTargets = findAliases(tsconfig)
 
   return {
     hasPackageJson,
     packageJsonParseError: hasPackageJson && pkg === undefined,
     hasTsconfig,
     css: await findStylesheet(cwd),
-    aliasPrefix: alias.prefix,
-    aliasTargetDir: alias.targetDir,
+    aliasPrefix: aliasTargets[0]?.prefix ?? DEFAULT_ALIAS_PREFIX,
+    aliasTargets,
     tsx: hasTsconfig,
     rsc: usesNext(pkg) && hasAppDir,
     packageManager: detectPackageManager(files, env.npm_config_user_agent),

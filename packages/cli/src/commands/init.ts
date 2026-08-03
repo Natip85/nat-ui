@@ -3,7 +3,7 @@ import {dirname, isAbsolute, join, relative} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
-import {detectProject, toPosixPath} from '../detect/project'
+import {detectProject, targetDirForPrefix, toPosixPath} from '../detect/project'
 import {atomicWriteFile} from '../fs/atomic-write'
 import {readText} from '../fs/read-text'
 import {defaultAnswers, type Asker} from '../prompts/ask'
@@ -122,11 +122,18 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   await atomicWriteFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
   io.log(`Wrote ${CONFIG_FILE_NAME}`)
 
-  // Prefer where tsconfig's `paths` says the alias actually resolves; the
-  // stylesheet's location is only a fallback guess for when there is nothing
-  // more reliable to go on.
+  // Prefer where tsconfig's `paths` says the alias the user actually chose
+  // resolves — not whichever prefix was merely detected, since the prompt can
+  // override it — falling back to a guess from the stylesheet's location when
+  // there's nothing more reliable to go on, or when the `paths` target turns
+  // out to point outside the project (a hint, not a user instruction, so it's
+  // discarded rather than trusted enough to write there).
   const cssBaseDir = answers.css.startsWith('src/') ? 'src' : ''
-  const utilsBaseDir = detected.aliasTargetDir ?? cssBaseDir
+  const aliasTargetDir = targetDirForPrefix(detected.aliasTargets, answers.aliasPrefix)
+  const utilsBaseDir =
+    aliasTargetDir !== undefined && isWithinRoot(io.cwd, join(io.cwd, aliasTargetDir))
+      ? aliasTargetDir
+      : cssBaseDir
   const relativeUtils = utilsPath(
     aliasesFor(answers.aliasPrefix).utils,
     answers.aliasPrefix,

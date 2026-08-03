@@ -144,6 +144,59 @@ describe('init', () => {
     await expect(read('src/lib/utils.ts')).rejects.toThrow()
   })
 
+  test('places the utility using the paths target for the prefix the user actually chose, not the detected default', async () => {
+    // `~` is the detected default (first paths entry), targeting `src`, but
+    // the user overrides the prefix to `@` at the prompt, which targets `app`.
+    // The utility -- and the alias recorded in components.json -- must follow
+    // the chosen prefix's target, or the import `@/lib/utils` (-> `app/lib/utils`)
+    // would resolve to a file that was never written.
+    await write('package.json', JSON.stringify({dependencies: {next: '16.0.0'}}))
+    await write(
+      'tsconfig.json',
+      JSON.stringify({compilerOptions: {paths: {'~/*': ['./src/*'], '@/*': ['./app/*']}}}),
+    )
+    await write('src/app/globals.css', "@import 'tailwindcss';\n")
+
+    const code = await init(
+      io({
+        interactive: true,
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src/app/globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
+
+    expect(code).toBe(0)
+    expect(await read('app/lib/utils.ts')).toContain('export function cn(')
+    await expect(read('src/lib/utils.ts')).rejects.toThrow()
+    await expect(read('lib/utils.ts')).rejects.toThrow()
+
+    const config: unknown = JSON.parse(await read('components.json'))
+    expect(config).toMatchObject({aliases: {utils: '@/lib/utils'}})
+  })
+
+  test('falls back to the stylesheet-based heuristic when the alias target escapes the project root', async () => {
+    await write('package.json', JSON.stringify({dependencies: {next: '16.0.0'}}))
+    await write(
+      'tsconfig.json',
+      JSON.stringify({compilerOptions: {paths: {'@/*': ['../../outside/*']}}}),
+    )
+    await write('src/app/globals.css', "@import 'tailwindcss';\n")
+
+    const code = await init(io(), {yes: true})
+
+    expect(code).toBe(0)
+    // Falls back to the css-based heuristic (css lives under src/, so the
+    // utility does too) instead of writing outside the project entirely.
+    expect(await read('src/lib/utils.ts')).toContain('export function cn(')
+  })
+
   test('refuses a stylesheet path that resolves outside the project root, before writing anything', async () => {
     await write('package.json', '{}')
 

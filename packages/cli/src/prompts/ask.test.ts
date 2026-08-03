@@ -8,7 +8,7 @@ const detected: DetectedProject = {
   hasTsconfig: true,
   css: 'src/app/globals.css',
   aliasPrefix: '@',
-  aliasTargetDir: 'src',
+  aliasTargets: [{prefix: '@', targetDir: 'src'}],
   tsx: true,
   rsc: true,
   packageManager: 'pnpm',
