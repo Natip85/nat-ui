@@ -5,6 +5,7 @@ packages:
 # Single source of truth for shared dependency versions across the workspace.
 # Packages reference these with "catalog:" instead of a literal range.
 catalog:
+  '@clack/prompts': ^1.7.0
   '@changesets/cli': ^2.31.1
   '@eslint/js': ^10.0.1
   '@types/node': ^22.15.0

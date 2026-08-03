@@ -38,6 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@clack/prompts": "catalog:",
     "@nat-ui/schema": "workspace:*",
     "@types/node": "catalog:",
     "tsup": "catalog:",
