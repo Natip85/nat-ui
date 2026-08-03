@@ -3,7 +3,7 @@ import {dirname, join} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
-import {detectProject} from '../detect/project'
+import {detectProject, toPosixPath} from '../detect/project'
 import {readText} from '../fs/read-text'
 import {defaultAnswers, type Asker} from '../prompts/ask'
 import {cnTemplate} from '../templates/cn'
@@ -22,12 +22,12 @@ export interface InitIo {
 
 export const INSTALLED_PACKAGES = ['clsx', 'tailwind-merge'] as const
 
-/** `@/lib/utils` with prefix `@` and tsconfig paths rooted at src → `src/lib/utils.ts`. */
-const utilsPath = (alias: string, prefix: string, underSrc: boolean, tsx: boolean): string => {
+/** `@/lib/utils` with prefix `@` and a paths target rooted at `src` → `src/lib/utils.ts`. */
+const utilsPath = (alias: string, prefix: string, baseDir: string, tsx: boolean): string => {
   const withoutPrefix = alias.startsWith(`${prefix}/`) ? alias.slice(prefix.length + 1) : alias
   const extension = tsx ? '.ts' : '.js'
 
-  return join(underSrc ? 'src' : '', `${withoutPrefix}${extension}`)
+  return join(baseDir, `${withoutPrefix}${extension}`)
 }
 
 export const init = async (io: InitIo, options: {yes: boolean}): Promise<number> => {
@@ -63,7 +63,10 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
       return 1
     }
-    answers = gathered
+    // Normalized once here so every downstream use — the stylesheet lookup, the
+    // utility placement heuristic, and what lands in components.json — agrees,
+    // regardless of which separator style the user typed at the prompt.
+    answers = {...gathered, css: toPosixPath(gathered.css)}
   } catch (error) {
     io.log(error instanceof Error ? error.message : String(error))
 
@@ -98,11 +101,15 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8')
   io.log(`Wrote ${CONFIG_FILE_NAME}`)
 
-  const underSrc = answers.css.startsWith('src/')
+  // Prefer where tsconfig's `paths` says the alias actually resolves; the
+  // stylesheet's location is only a fallback guess for when there is nothing
+  // more reliable to go on.
+  const cssBaseDir = answers.css.startsWith('src/') ? 'src' : ''
+  const utilsBaseDir = detected.aliasTargetDir ?? cssBaseDir
   const relativeUtils = utilsPath(
     aliasesFor(answers.aliasPrefix).utils,
     answers.aliasPrefix,
-    underSrc,
+    utilsBaseDir,
     answers.tsx,
   )
   const absoluteUtils = join(io.cwd, relativeUtils)

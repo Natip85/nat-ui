@@ -121,6 +121,45 @@ describe('init', () => {
     expect(installs).toEqual([])
   })
 
+  test('places the utility per the paths target when it disagrees with the stylesheet location', async () => {
+    // CSS lives under src/, but the alias maps to the project root, so the
+    // import `@/lib/utils` resolves to `lib/utils.ts`, not `src/lib/utils.ts`.
+    await write('package.json', JSON.stringify({dependencies: {next: '16.0.0'}}))
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'@/*': ['./*']}}}))
+    await write('src/app/globals.css', "@import 'tailwindcss';\n")
+
+    const code = await init(io(), {yes: true})
+
+    expect(code).toBe(0)
+    expect(await read('lib/utils.ts')).toContain('export function cn(')
+    await expect(read('src/lib/utils.ts')).rejects.toThrow()
+  })
+
+  test('normalizes a Windows-style stylesheet path before placing the utility and writing config', async () => {
+    await nextProject()
+
+    const code = await init(
+      io({
+        interactive: true,
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src\\app\\globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
+
+    expect(code).toBe(0)
+    expect(await read('src/lib/utils.ts')).toContain('export function cn(')
+
+    const config: unknown = JSON.parse(await read('components.json'))
+    expect(config).toMatchObject({tailwind: {css: 'src/app/globals.css'}})
+  })
+
   test('writes a js utility for a javascript project', async () => {
     await write('package.json', '{}')
     await write('app/globals.css', "@import 'tailwindcss';\n")

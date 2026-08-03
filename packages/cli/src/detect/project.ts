@@ -11,10 +11,21 @@ export interface DetectedProject {
   hasTsconfig: boolean
   css: string | undefined
   aliasPrefix: string
+  /**
+   * Directory the alias root resolves to, taken from the `paths` entry that
+   * supplied `aliasPrefix` (e.g. `{"@/*": ["./src/*"]}` → `'src'`; `["./*"]` →
+   * `''` for the project root). Forward-slash normalized, relative to `cwd`.
+   * `undefined` when tsconfig had no usable `paths` entry to derive this
+   * from — callers should fall back to another heuristic in that case.
+   */
+  aliasTargetDir: string | undefined
   tsx: boolean
   rsc: boolean
   packageManager: PackageManager
 }
+
+/** Backslashes flipped to forward slashes, so paths compare and print consistently across platforms. */
+export const toPosixPath = (path: string): string => path.replace(/\\/g, '/')
 
 /** Ordered by how likely each layout is, and checked with a `tailwindcss` import. */
 export const CSS_CANDIDATES = [
@@ -77,15 +88,43 @@ const findStylesheet = async (cwd: string): Promise<string | undefined> => {
   return undefined
 }
 
-/** Reads the prefix out of the first `paths` key shaped like `X/*`. */
-const findAliasPrefix = (tsconfig: Record<string, unknown> | undefined): string => {
+interface AliasMapping {
+  readonly prefix: string
+  readonly targetDir: string | undefined
+}
+
+const ALIAS_KEY_PATTERN = /^(.+)\/\*$/
+const ALIAS_TARGET_PATTERN = /^(.*)\/\*$/
+
+/** Strips a leading `./` (or reduces a bare `.`) and any trailing slash, so `'./src/'` and `'src'` agree. */
+const normalizeAliasTarget = (raw: string): string => {
+  const posix = toPosixPath(raw)
+  const withoutLeadingDot = posix === '.' ? '' : posix.startsWith('./') ? posix.slice(2) : posix
+
+  return withoutLeadingDot.replace(/\/+$/, '')
+}
+
+/** The first string entry of a `paths` value, matched against the `Y/*` shape TS conventionally pairs with an `X/*` key. */
+const targetDirFor = (value: unknown): string | undefined => {
+  const first = Array.isArray(value)
+    ? value.find((entry): entry is string => typeof entry === 'string')
+    : undefined
+  if (first === undefined) return undefined
+
+  const target = ALIAS_TARGET_PATTERN.exec(first)?.[1]
+
+  return target === undefined ? undefined : normalizeAliasTarget(target)
+}
+
+/** Reads the prefix and target directory out of the first `paths` key shaped like `X/*`. */
+const findAlias = (tsconfig: Record<string, unknown> | undefined): AliasMapping => {
   const paths = asRecord(asRecord(tsconfig?.compilerOptions).paths)
   for (const key of Object.keys(paths)) {
-    const prefix = /^(.+)\/\*$/.exec(key)?.[1]
-    if (prefix !== undefined) return prefix
+    const prefix = ALIAS_KEY_PATTERN.exec(key)?.[1]
+    if (prefix !== undefined) return {prefix, targetDir: targetDirFor(paths[key])}
   }
 
-  return DEFAULT_ALIAS_PREFIX
+  return {prefix: DEFAULT_ALIAS_PREFIX, targetDir: undefined}
 }
 
 const usesNext = (pkg: Record<string, unknown> | undefined): boolean =>
@@ -105,13 +144,15 @@ export const detectProject = async (
     (await directoryExists(join(cwd, 'app'))) || (await directoryExists(join(cwd, 'src/app')))
 
   const files = await listDirectory(cwd)
+  const alias = findAlias(tsconfig)
 
   return {
     hasPackageJson,
     packageJsonParseError: hasPackageJson && pkg === undefined,
     hasTsconfig,
     css: await findStylesheet(cwd),
-    aliasPrefix: findAliasPrefix(tsconfig),
+    aliasPrefix: alias.prefix,
+    aliasTargetDir: alias.targetDir,
     tsx: hasTsconfig,
     rsc: usesNext(pkg) && hasAppDir,
     packageManager: detectPackageManager(files, env.npm_config_user_agent),

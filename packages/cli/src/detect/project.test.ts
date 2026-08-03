@@ -152,4 +152,30 @@ describe('detectProject', () => {
 
     expect(detected.packageJsonParseError).toBe(false)
   })
+
+  test('captures the paths target directory for the alias', async () => {
+    await write('package.json', '{}')
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'@/*': ['./src/*']}}}))
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.aliasTargetDir).toBe('src')
+  })
+
+  test('captures a paths target that maps the alias to the project root', async () => {
+    await write('package.json', '{}')
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'@/*': ['./*']}}}))
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.aliasTargetDir).toBe('')
+  })
+
+  test('leaves the target dir undefined when there is no usable paths entry', async () => {
+    await write('package.json', '{}')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.aliasTargetDir).toBeUndefined()
+  })
 })
