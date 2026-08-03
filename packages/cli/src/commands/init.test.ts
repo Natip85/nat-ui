@@ -18,6 +18,17 @@ const write = async (relative: string, contents: string): Promise<void> => {
 
 const read = (relative: string): Promise<string> => readFile(join(cwd, relative), 'utf8')
 
+/**
+ * The ordering invariant is that nothing is written until every fallible step
+ * has succeeded, so a failure test that only checks `components.json` would
+ * still pass if a later write were hoisted above the guard.
+ */
+const expectAbsent = async (...paths: string[]): Promise<void> => {
+  for (const path of paths) {
+    await expect(read(path)).rejects.toThrow()
+  }
+}
+
 const io = (overrides: Partial<InitIo> = {}): InitIo => ({
   cwd,
   env: {},
@@ -72,7 +83,7 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
     expect(installs).toEqual([])
   })
 
@@ -82,7 +93,8 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
+    expect(installs).toEqual([])
   })
 
   test('writes a js utility for a javascript project', async () => {
@@ -182,11 +194,14 @@ describe('init', () => {
 
   test('exits without writing when the user cancels the prompts', async () => {
     await nextProject()
+    const before = await read('src/app/globals.css')
 
     const code = await init(io({interactive: true}), {yes: false})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'src/lib/utils.ts')
+    expect(await read('src/app/globals.css')).toBe(before)
+    expect(installs).toEqual([])
   })
 
   test('refuses an incomplete theme block without touching anything', async () => {
@@ -195,6 +210,9 @@ describe('init', () => {
     const applied = await read('src/app/globals.css')
     await write('src/app/globals.css', applied.replace(THEME_START, ''))
     await write('components.json', '{"existing": true}')
+    await write('src/lib/utils.ts', 'export const mine = 1\n')
+    const damaged = await read('src/app/globals.css')
+    installs = []
 
     const code = await init(
       io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}),
@@ -206,6 +224,9 @@ describe('init', () => {
     expect(code).toBe(1)
     expect(logs.join('\n')).toMatch(/nat-ui theme/)
     expect(await read('components.json')).toContain('existing')
+    expect(await read('src/app/globals.css')).toBe(damaged)
+    expect(await read('src/lib/utils.ts')).toBe('export const mine = 1\n')
+    expect(installs).toEqual([])
   })
 
   test('warns but continues when TypeScript is chosen without a tsconfig', async () => {

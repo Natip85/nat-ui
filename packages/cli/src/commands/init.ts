@@ -83,10 +83,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   let themed: string
   try {
     config = resolveConfig(answers)
-    // Only two of the five base colours the schema allows have a preset. Anything
-    // else reaches here only by hand-editing components.json, and falls back to
-    // neutral rather than leaving the stylesheet without tokens.
-    themed = applyTheme(stylesheet, PRESETS[answers.baseColor === 'slate' ? 'slate' : 'neutral'])
+    themed = applyTheme(stylesheet, PRESETS[answers.baseColor])
   } catch (error) {
     io.log(error instanceof Error ? error.message : String(error))
 

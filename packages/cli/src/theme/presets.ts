@@ -126,10 +126,20 @@ const slate: ThemePreset = {
   },
 }
 
-export const PRESETS = {neutral, slate} satisfies Record<string, ThemePreset>
+// `Partial<Record<BaseColor, …>>` rather than `Record<string, …>`: it forces every
+// key to be a value the schema accepts, while leaving the inferred key type as the
+// two names that actually have presets.
+export const PRESETS = {neutral, slate} satisfies Partial<Record<BaseColor, ThemePreset>>
+
+/**
+ * The base colours init can actually apply. Narrower than `BaseColor` on purpose,
+ * so no answer can name a style with no CSS behind it and leave `components.json`
+ * disagreeing with the stylesheet next to it.
+ */
+export type PresetName = keyof typeof PRESETS
 
 /** Ordered. The first entry is what the prompt offers by default. */
-export const PRESET_CHOICES: readonly {label: string; value: BaseColor}[] = [
+export const PRESET_CHOICES: readonly {label: string; value: PresetName}[] = [
   {label: 'Neutral', value: 'neutral'},
   {label: 'Slate', value: 'slate'},
 ]

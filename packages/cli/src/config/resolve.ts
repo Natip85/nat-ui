@@ -1,7 +1,8 @@
-import {type BaseColor, type Config, configSchema} from '@nat-ui/schema'
+import {type Config, configSchema} from '@nat-ui/schema'
+import type {PresetName} from '../theme/presets'
 
 export interface InitAnswers {
-  baseColor: BaseColor
+  baseColor: PresetName
   css: string
   aliasPrefix: string
   rsc: boolean
