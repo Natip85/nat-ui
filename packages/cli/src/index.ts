@@ -99,20 +99,10 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
         confirmOverwrite,
         install: async (pm, packages, cwd) => {
           const {installCommand} = await import('./detect/package-manager')
-          const {spawn} = await import('node:child_process')
+          const {spawnInstall} = await import('./install/spawn-install')
           const {command: bin, args} = installCommand(pm, packages)
 
-          await new Promise<void>((resolve, reject) => {
-            const child = spawn(bin, args, {
-              cwd,
-              stdio: 'inherit',
-              shell: process.platform === 'win32',
-            })
-            child.on('error', reject)
-            child.on('close', (code) =>
-              code === 0 ? resolve() : reject(new Error(`${bin} exited with code ${String(code)}`)),
-            )
-          })
+          await spawnInstall(bin, args, cwd)
         },
         log,
       },
