@@ -1,4 +1,4 @@
-import {mkdtemp, mkdir, readFile, writeFile} from 'node:fs/promises'
+import {mkdtemp, mkdir, readFile, rm, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {beforeEach, describe, expect, test} from 'vitest'
@@ -28,6 +28,16 @@ const expectAbsent = async (...paths: string[]): Promise<void> => {
     await expect(read(path)).rejects.toThrow()
   }
 }
+
+/** Every path init can write, for fixtures that start with none of them. */
+const UNWRITTEN = [
+  'components.json',
+  'lib/utils.ts',
+  'lib/utils.js',
+  'src/lib/utils.ts',
+  'app/globals.css',
+  'src/app/globals.css',
+] as const
 
 const io = (overrides: Partial<InitIo> = {}): InitIo => ({
   cwd,
@@ -83,7 +93,7 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
+    await expectAbsent(...UNWRITTEN)
     expect(installs).toEqual([])
   })
 
@@ -93,7 +103,7 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
+    await expectAbsent(...UNWRITTEN)
     expect(installs).toEqual([])
   })
 
@@ -210,7 +220,10 @@ describe('init', () => {
     const applied = await read('src/app/globals.css')
     await write('src/app/globals.css', applied.replace(THEME_START, ''))
     await write('components.json', '{"existing": true}')
-    await write('src/lib/utils.ts', 'export const mine = 1\n')
+    // Removed rather than left in place: init skips a utility that already
+    // exists, so asserting an existing one is unchanged would prove nothing
+    // about whether the write was hoisted above the guard.
+    await rm(join(cwd, 'src/lib/utils.ts'))
     const damaged = await read('src/app/globals.css')
     installs = []
 
@@ -225,7 +238,7 @@ describe('init', () => {
     expect(logs.join('\n')).toMatch(/nat-ui theme/)
     expect(await read('components.json')).toContain('existing')
     expect(await read('src/app/globals.css')).toBe(damaged)
-    expect(await read('src/lib/utils.ts')).toBe('export const mine = 1\n')
+    await expectAbsent('src/lib/utils.ts')
     expect(installs).toEqual([])
   })
 
