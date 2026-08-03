@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -16,11 +19,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Oldest supported version per `engines`, plus current LTS.
-        node: ['20.19', '22']
+        # Oldest supported version per `engines`, plus the active LTS. The floor
+        # is a 22.x patch rather than 22.0 because ESLint 10 requires ^22.13.
+        node: ['22.13', '24']
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Later steps run pull request code, which has no need for the token.
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v6
 

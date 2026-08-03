@@ -19,7 +19,8 @@
     "react"
   ],
   "files": [
-    "dist"
+    "dist",
+    "THIRD_PARTY_NOTICES"
   ],
   "bin": {
     "nat-ui": "./dist/index.js"
