@@ -529,8 +529,6 @@ const withImport = "@import 'tailwindcss';\n\n.app {\n  color: red;\n}\n"
 
 const countOf = (haystack: string, needle: string): number => haystack.split(needle).length - 1
 
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
-
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 describe('applyTheme', () => {

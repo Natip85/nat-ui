@@ -29,7 +29,21 @@ export const applyTheme = (stylesheet: string, preset: ThemePreset): string => {
 
   const start = stylesheet.indexOf(THEME_START)
   const end = stylesheet.indexOf(THEME_END)
-  if (start !== -1 && end > start) {
+  const hasStart = start !== -1
+  const hasEnd = end !== -1
+
+  // Inserting a fresh block alongside a half-marked one would leave the previous
+  // run's rules below the new ones, where they win the cascade and silently
+  // override the style the user just picked. Refuse instead.
+  if (hasStart !== hasEnd || (hasStart && end < start)) {
+    throw new Error(
+      `Your stylesheet has an incomplete nat-ui theme block. It needs both ${THEME_START} ` +
+        `and ${THEME_END}, in that order. Restore the missing marker or delete the leftover ` +
+        `block, then run init again.`,
+    )
+  }
+
+  if (hasStart && hasEnd) {
     return stylesheet.slice(0, start) + next + stylesheet.slice(end + THEME_END.length)
   }
 
