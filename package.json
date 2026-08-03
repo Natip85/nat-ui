@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "A component distribution platform. Copy-paste components, own the code.",
-  "packageManager": "pnpm@10.11.1",
+  "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22.13"
   },

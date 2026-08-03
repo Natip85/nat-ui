@@ -11,6 +11,9 @@
   },
   "homepage": "https://github.com/Natip85/nat-ui#readme",
   "bugs": "https://github.com/Natip85/nat-ui/issues",
+  "engines": {
+    "node": ">=22.13"
+  },
   "keywords": [
     "nat-ui",
     "components",
