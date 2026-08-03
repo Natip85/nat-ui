@@ -1,0 +1,100 @@
+import {mkdtemp, mkdir, writeFile} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {beforeEach, describe, expect, test} from 'vitest'
+import {detectProject} from './project'
+
+let cwd: string
+
+const write = async (relative: string, contents: string): Promise<void> => {
+  const path = join(cwd, relative)
+  await mkdir(join(path, '..'), {recursive: true})
+  await writeFile(path, contents, 'utf8')
+}
+
+beforeEach(async () => {
+  cwd = await mkdtemp(join(tmpdir(), 'nat-ui-detect-'))
+})
+
+describe('detectProject', () => {
+  test('reports a missing package.json', async () => {
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasPackageJson).toBe(false)
+  })
+
+  test('finds a Next.js app-directory project', async () => {
+    await write('package.json', JSON.stringify({dependencies: {next: '16.0.0'}}))
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'@/*': ['./src/*']}}}))
+    await write('src/app/globals.css', "@import 'tailwindcss';\n")
+    await write('pnpm-lock.yaml', '')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasPackageJson).toBe(true)
+    expect(detected.css).toBe('src/app/globals.css')
+    expect(detected.aliasPrefix).toBe('@')
+    expect(detected.tsx).toBe(true)
+    expect(detected.rsc).toBe(true)
+    expect(detected.packageManager).toBe('pnpm')
+  })
+
+  test('finds a Vite-style project and does not claim RSC', async () => {
+    await write('package.json', JSON.stringify({dependencies: {react: '19.0.0'}}))
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'~/*': ['./src/*']}}}))
+    await write('src/index.css', '@import "tailwindcss";\n')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.css).toBe('src/index.css')
+    expect(detected.aliasPrefix).toBe('~')
+    expect(detected.rsc).toBe(false)
+  })
+
+  test('treats a project without tsconfig as JavaScript with an @ prefix', async () => {
+    await write('package.json', '{}')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasTsconfig).toBe(false)
+    expect(detected.tsx).toBe(false)
+    expect(detected.aliasPrefix).toBe('@')
+  })
+
+  test('ignores a stylesheet that does not import tailwind', async () => {
+    await write('package.json', '{}')
+    await write('app/globals.css', 'body {\n  margin: 0;\n}\n')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.css).toBeUndefined()
+  })
+
+  test('does not claim RSC for Next.js without an app directory', async () => {
+    await write('package.json', JSON.stringify({dependencies: {next: '16.0.0'}}))
+    await write('pages/index.tsx', 'export default function Page() {}\n')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.rsc).toBe(false)
+  })
+
+  test('falls back to the user agent for the package manager', async () => {
+    await write('package.json', '{}')
+
+    const detected = await detectProject(cwd, {npm_config_user_agent: 'bun/1.2.0'})
+
+    expect(detected.packageManager).toBe('bun')
+  })
+
+  test('survives malformed json without throwing', async () => {
+    await write('package.json', '{not json')
+    await write('tsconfig.json', '{not json')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasPackageJson).toBe(true)
+    expect(detected.rsc).toBe(false)
+    expect(detected.aliasPrefix).toBe('@')
+  })
+})
