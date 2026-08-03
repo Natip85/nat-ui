@@ -1,5 +1,5 @@
 import {mkdir, writeFile} from 'node:fs/promises'
-import {dirname, join} from 'node:path'
+import {dirname, isAbsolute, join, relative} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
@@ -21,6 +21,18 @@ export interface InitIo {
 }
 
 export const INSTALLED_PACKAGES = ['clsx', 'tailwind-merge'] as const
+
+/**
+ * Judged purely on the path the user gave — never on where it resolves on disk — so
+ * a stylesheet that is itself a symlink pointing outside the project (a real
+ * monorepo pattern) is still accepted. Only a path that already reads outside the
+ * project root, like `../../elsewhere.css`, is refused.
+ */
+const isWithinRoot = (root: string, target: string): boolean => {
+  const rel = relative(root, target)
+
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+}
 
 /** `@/lib/utils` with prefix `@` and a paths target rooted at `src` → `src/lib/utils.ts`. */
 const utilsPath = (alias: string, prefix: string, baseDir: string, tsx: boolean): string => {
@@ -80,6 +92,12 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   }
 
   const stylesheetPath = join(io.cwd, answers.css)
+  if (!isWithinRoot(io.cwd, stylesheetPath)) {
+    io.log(`${answers.css} resolves outside the project. Choose a stylesheet inside ${io.cwd}.`)
+
+    return 1
+  }
+
   const stylesheet = await readText(stylesheetPath)
   if (stylesheet === undefined) {
     io.log(`Could not read ${answers.css}. Nothing was changed.`)

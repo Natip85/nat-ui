@@ -135,6 +135,30 @@ describe('init', () => {
     await expect(read('src/lib/utils.ts')).rejects.toThrow()
   })
 
+  test('refuses a stylesheet path that resolves outside the project root, before writing anything', async () => {
+    await write('package.json', '{}')
+
+    const code = await init(
+      io({
+        interactive: true,
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: '../../elsewhere.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
+
+    expect(code).toBe(1)
+    expect(logs.join('\n')).toMatch(/outside the project/)
+    await expectAbsent(...UNWRITTEN)
+    expect(installs).toEqual([])
+  })
+
   test('normalizes a Windows-style stylesheet path before placing the utility and writing config', async () => {
     await nextProject()
 
