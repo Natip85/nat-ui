@@ -1,0 +1,38 @@
+{
+  "name": "@nat-ui/cli",
+  "version": "0.0.0",
+  "description": "Add nat-ui components to your project.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "nat-ui",
+    "components",
+    "ui",
+    "tailwindcss",
+    "react"
+  ],
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "nat-ui": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nat-ui/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

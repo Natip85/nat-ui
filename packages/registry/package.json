@@ -1,0 +1,17 @@
+{
+  "name": "@nat-ui/registry",
+  "version": "0.0.0",
+  "description": "Canonical source for every nat-ui component, plus the typed registry definition.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nat-ui/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}
