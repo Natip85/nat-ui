@@ -15,4 +15,7 @@ export default defineConfig({
   dts: false,
   clean: true,
   minify: true,
+  // Read after the build to work out whose licenses have to ship.
+  metafile: true,
+  onSuccess: 'tsx scripts/generate-notices.ts',
 })

@@ -23,7 +23,7 @@
   ],
   "files": [
     "dist",
-    "THIRD_PARTY_NOTICES"
+    "!dist/metafile-*.json"
   ],
   "bin": {
     "nat-ui": "./dist/index.js"
