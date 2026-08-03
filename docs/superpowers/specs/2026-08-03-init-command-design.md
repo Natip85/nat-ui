@@ -241,7 +241,11 @@ function, so it needs no disk access to test.
 
 Unit tests:
 
-- Resolution precedence: flag beats answer beats detected value beats default.
+- Resolution: answers map onto the right config fields, the alias prefix expands
+  into three aliases, schema defaults are materialized, and an answer the schema
+  rejects fails loudly rather than being written. Since there are no per-field
+  flags, precedence is only answer over detected value over conventional
+  default, and that is settled while prompting rather than in resolution.
 - Theme application in all three states: fresh insert, replacing an existing
   marked block, and no duplication when run twice.
 - Package-manager detection for each lockfile, including precedence between
