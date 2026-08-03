@@ -16,20 +16,20 @@ pnpm dlx @nat-ui/cli@latest init
 pnpm dlx @nat-ui/cli@latest add button
 ```
 
-`init` asks where your stylesheet and import aliases live, writes
-`components.json` recording those answers, creates a `cn` helper at your `utils`
-alias, writes theme variables into your stylesheet, and installs `clsx` and
-`tailwind-merge` with your detected package manager. Pick between the
-`neutral` (default) and `slate` base colors when prompted. Pass `--yes` (or
-`-y`) to accept every detected default without being asked — the same
-defaults apply automatically when stdin isn't a TTY, except that a stylesheet
-already importing `tailwindcss` must be found; if none is, run `init`
-interactively so you can point it at one.
+`init` sets a project up in one pass. It asks where your stylesheet and import
+aliases live, then writes `components.json` with those answers, creates a `cn`
+helper at your `utils` alias, adds theme variables to your stylesheet, and
+installs `clsx` and `tailwind-merge` with your detected package manager. You
+also pick a base color, `neutral` or `slate`.
 
-Re-running `init` is safe: it updates the theme block in your stylesheet in
-place instead of duplicating it. If `components.json` already exists, `init`
-asks whether to overwrite it (defaulting to no), or, under `--yes` or a
-non-interactive shell, leaves it untouched automatically.
+Pass `--yes` (or `-y`) to accept every detected default without being asked.
+The same defaults apply automatically when stdin isn't a TTY, so `init` won't
+hang in CI. The one thing it won't guess is your stylesheet: if it can't find
+one that imports `tailwindcss`, it stops rather than picking a file at random.
+
+Re-running `init` is safe. It updates the theme block in your stylesheet in
+place instead of duplicating it, and if `components.json` already exists it
+asks before overwriting — declining, and changing nothing, when it can't ask.
 
 Every later `add` reads that config and rewrites imports to match your
 project's aliases, so the files land where you already keep things.
