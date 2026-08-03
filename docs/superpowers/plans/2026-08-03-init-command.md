@@ -276,7 +276,8 @@ git commit -m "feat(cli): add the cn utility template"
 - Produces:
   - `type ThemePreset = {light: Record<string, string>; dark: Record<string, string>}`
   - `const PRESETS: Record<'neutral' | 'slate', ThemePreset>`
-  - `const PRESET_CHOICES: ReadonlyArray<{label: string; value: BaseColor}>` — ordered, first is the default
+  - `type PresetName = keyof typeof PRESETS` — the two base colours init can apply
+  - `const PRESET_CHOICES: readonly {label: string; value: PresetName}[]` — ordered, first is the default
   - `const THEME_TOKENS: readonly string[]` — the token contract
 
 - [ ] **Step 1: Write the failing test**
@@ -454,10 +455,20 @@ const slate: ThemePreset = {
   },
 }
 
-export const PRESETS = {neutral, slate} satisfies Record<string, ThemePreset>
+// `Partial<Record<BaseColor, …>>` rather than `Record<string, …>`: it forces every
+// key to be a value the schema accepts, while leaving the inferred key type as the
+// two names that actually have presets.
+export const PRESETS = {neutral, slate} satisfies Partial<Record<BaseColor, ThemePreset>>
+
+/**
+ * The base colours init can actually apply. Narrower than `BaseColor` on purpose,
+ * so no answer can name a style with no CSS behind it and leave `components.json`
+ * disagreeing with the stylesheet next to it.
+ */
+export type PresetName = keyof typeof PRESETS
 
 /** Ordered. The first entry is what the prompt offers by default. */
-export const PRESET_CHOICES: ReadonlyArray<{label: string; value: BaseColor}> = [
+export const PRESET_CHOICES: readonly {label: string; value: PresetName}[] = [
   {label: 'Neutral', value: 'neutral'},
   {label: 'Slate', value: 'slate'},
 ]
@@ -692,9 +703,10 @@ git commit -m "feat(cli): apply theme variables idempotently"
 
 **Interfaces:**
 
-- Consumes: `configSchema`, `type Config`, `type BaseColor` from `@nat-ui/schema`.
+- Consumes: `configSchema`, `type Config` from `@nat-ui/schema`, and `type PresetName` from
+  `../theme/presets`.
 - Produces:
-  - `type InitAnswers = {baseColor: BaseColor; css: string; aliasPrefix: string; rsc: boolean; tsx: boolean}`
+  - `type InitAnswers = {baseColor: PresetName; css: string; aliasPrefix: string; rsc: boolean; tsx: boolean}`
   - `resolveConfig(answers: InitAnswers): Config`
   - `aliasesFor(prefix: string): {components: string; utils: string; ui: string}`
 
@@ -769,10 +781,11 @@ Expected: FAIL — cannot resolve `./resolve`.
 Create `packages/cli/src/config/resolve.ts`:
 
 ```ts
-import {type BaseColor, type Config, configSchema} from '@nat-ui/schema'
+import {type Config, configSchema} from '@nat-ui/schema'
+import type {PresetName} from '../theme/presets'
 
 export type InitAnswers = {
-  baseColor: BaseColor
+  baseColor: PresetName
   css: string
   aliasPrefix: string
   rsc: boolean
@@ -1428,6 +1441,17 @@ const nextProject = async (): Promise<void> => {
   await mkdir(join(cwd, 'src/app'), {recursive: true})
 }
 
+/**
+ * The ordering invariant is that nothing is written until every fallible step
+ * has succeeded, so a failure test that only checks `components.json` would
+ * still pass if a later write were hoisted above the guard.
+ */
+const expectAbsent = async (...paths: string[]): Promise<void> => {
+  for (const path of paths) {
+    await expect(read(path)).rejects.toThrow()
+  }
+}
+
 beforeEach(async () => {
   cwd = await mkdtemp(join(tmpdir(), 'nat-ui-init-'))
   installs = []
@@ -1459,7 +1483,7 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
     expect(installs).toEqual([])
   })
 
@@ -1469,7 +1493,8 @@ describe('init', () => {
     const code = await init(io(), {yes: true})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'lib/utils.ts', 'src/lib/utils.ts')
+    expect(installs).toEqual([])
   })
 
   test('writes a js utility for a javascript project', async () => {
@@ -1569,11 +1594,14 @@ describe('init', () => {
 
   test('exits without writing when the user cancels the prompts', async () => {
     await nextProject()
+    const before = await read('src/app/globals.css')
 
     const code = await init(io({interactive: true}), {yes: false})
 
     expect(code).toBe(1)
-    await expect(read('components.json')).rejects.toThrow()
+    await expectAbsent('components.json', 'src/lib/utils.ts')
+    expect(await read('src/app/globals.css')).toBe(before)
+    expect(installs).toEqual([])
   })
 
   test('refuses an incomplete theme block without touching anything', async () => {
@@ -1581,7 +1609,9 @@ describe('init', () => {
     await init(io(), {yes: true})
     const applied = await read('src/app/globals.css')
     await write('src/app/globals.css', applied.replace(THEME_START, ''))
+    await write('src/lib/utils.ts', 'export const mine = 1\n')
     await write('components.json', '{"existing": true}')
+    const damaged = await read('src/app/globals.css')
 
     const code = await init(
       io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}),
@@ -1593,6 +1623,9 @@ describe('init', () => {
     expect(code).toBe(1)
     expect(logs.join('\n')).toMatch(/nat-ui theme/)
     expect(await read('components.json')).toContain('existing')
+    expect(await read('src/app/globals.css')).toBe(damaged)
+    expect(await read('src/lib/utils.ts')).toBe('export const mine = 1\n')
+    expect(installs).toEqual([])
   })
 
   test('warns but continues when TypeScript is chosen without a tsconfig', async () => {
@@ -1716,10 +1749,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   let themed: string
   try {
     config = resolveConfig(answers)
-    // Only two of the five base colours the schema allows have a preset. Anything
-    // else reaches here only by hand-editing components.json, and falls back to
-    // neutral rather than leaving the stylesheet without tokens.
-    themed = applyTheme(stylesheet, PRESETS[answers.baseColor === 'slate' ? 'slate' : 'neutral'])
+    themed = applyTheme(stylesheet, PRESETS[answers.baseColor])
   } catch (error) {
     io.log(error instanceof Error ? error.message : String(error))
 
