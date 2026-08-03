@@ -88,11 +88,10 @@ importers:
         version: 4.1.10(@types/node@22.20.1)(vite@8.2.0(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.5))
 
   packages/cli:
-    dependencies:
+    devDependencies:
       '@nat-ui/schema':
         specifier: workspace:*
         version: link:../schema
-    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.1
@@ -105,6 +104,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
   packages/registry:
     dependencies:

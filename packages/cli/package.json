@@ -4,6 +4,13 @@
   "description": "Add nat-ui components to your project.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Natip85/nat-ui.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Natip85/nat-ui#readme",
+  "bugs": "https://github.com/Natip85/nat-ui/issues",
   "keywords": [
     "nat-ui",
     "components",
@@ -26,13 +33,12 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@nat-ui/schema": "workspace:*"
-  },
   "devDependencies": {
+    "@nat-ui/schema": "workspace:*",
     "@types/node": "catalog:",
     "tsup": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "catalog:"
   }
 }

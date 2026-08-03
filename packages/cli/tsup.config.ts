@@ -5,9 +5,13 @@ export default defineConfig({
   format: ['esm'],
   target: 'node20',
   platform: 'node',
-  // Published as a binary run via `dlx`, so bundle workspace deps in and keep
+  // Published as a binary run via `dlx`, so bundle every dependency in and keep
   // the install as small as possible. No consumer ever imports from here.
-  noExternal: [/^@nat-ui\//],
+  //
+  // Bundling is why nothing below appears in `dependencies`. It also means a
+  // change to @nat-ui/schema changes what this package ships, so schema
+  // releases need an accompanying changeset here.
+  noExternal: [/^@nat-ui\//, 'zod'],
   dts: false,
   clean: true,
   minify: true,

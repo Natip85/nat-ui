@@ -4,6 +4,13 @@
   "description": "Zod schemas and types for nat-ui registry items and project config.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Natip85/nat-ui.git",
+    "directory": "packages/schema"
+  },
+  "homepage": "https://github.com/Natip85/nat-ui#readme",
+  "bugs": "https://github.com/Natip85/nat-ui/issues",
   "sideEffects": false,
   "files": [
     "dist"
