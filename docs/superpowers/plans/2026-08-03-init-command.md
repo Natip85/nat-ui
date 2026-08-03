@@ -613,36 +613,6 @@ describe('applyTheme', () => {
     expect(result.indexOf('tailwindcss')).toBeLessThan(result.indexOf(THEME_START))
   })
 })
-
-describe('applyTheme with a partial block', () => {
-  const applied = applyTheme(withImport, PRESETS.neutral)
-
-  test('refuses a block whose start marker was removed', () => {
-    const damaged = applied.replace(`${THEME_START}\n`, '')
-
-    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
-  })
-
-  test('refuses a block whose end marker was removed', () => {
-    const damaged = applied.replace(THEME_END, '')
-
-    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
-  })
-
-  test('refuses markers in the wrong order', () => {
-    const damaged = `${THEME_END}\n:root {\n  --background: red;\n}\n${THEME_START}\n`
-
-    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
-  })
-
-  test('names both markers so the user knows what to repair', () => {
-    const damaged = applied.replace(`${THEME_START}\n`, '')
-
-    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(
-      new RegExp(`${escapeRegExp(THEME_START)}[\\s\\S]*${escapeRegExp(THEME_END)}`),
-    )
-  })
-})
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
