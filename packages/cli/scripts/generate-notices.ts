@@ -1,6 +1,5 @@
-import {readFile, readdir, writeFile} from 'node:fs/promises'
+import {readFile, readdir} from 'node:fs/promises'
 import {resolve} from 'node:path'
-import {fileURLToPath} from 'node:url'
 import {resolveBundledPackage} from './resolve-bundled-package'
 
 // Priority order for which file wins when a package ships more than one.
@@ -157,16 +156,3 @@ export const generateNotices = async (
     packageCount: packages.length,
   }
 }
-
-const ROOT = fileURLToPath(new URL('../', import.meta.url))
-const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
-
-const main = async (): Promise<void> => {
-  const {content, packageCount} = await generateNotices({root: ROOT, distDir: DIST})
-
-  await writeFile(resolve(ROOT, 'THIRD_PARTY_NOTICES'), content, 'utf8')
-
-  console.log(`Wrote THIRD_PARTY_NOTICES for ${String(packageCount)} package(s).`)
-}
-
-await main()

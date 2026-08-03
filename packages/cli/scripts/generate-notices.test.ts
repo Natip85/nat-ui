@@ -122,6 +122,22 @@ describe('generateNotices', () => {
     expect(content).not.toContain('txt version')
   })
 
+  test('prefers a LICENSE-family file over COPYING, not just relative to another LICENSE variant', async () => {
+    await writePackageFile(
+      'license-vs-copying-pkg',
+      'package.json',
+      JSON.stringify({license: 'MIT'}),
+    )
+    await writePackageFile('license-vs-copying-pkg', 'COPYING', 'copying version')
+    await writePackageFile('license-vs-copying-pkg', 'LICENSE.md', 'license.md version')
+    await writeMetafile('metafile-only.json', {'node_modules/license-vs-copying-pkg/index.js': {}})
+
+    const {content} = await generateNotices({root, distDir})
+
+    expect(content).toContain('license.md version')
+    expect(content).not.toContain('copying version')
+  })
+
   test('discovers COPYING alone', async () => {
     await writePackageFile('copying-pkg', 'package.json', JSON.stringify({license: 'MIT'}))
     await writePackageFile('copying-pkg', 'COPYING', 'copying text')
@@ -130,6 +146,21 @@ describe('generateNotices', () => {
     const {content} = await generateNotices({root, distDir})
 
     expect(content).toContain('copying text')
+  })
+
+  test('propagates non-ENOENT errors instead of treating the package as unlicensed', async () => {
+    // A directory named LICENSE fails with EISDIR, not ENOENT, when read as a
+    // file. This is deterministic and portable, unlike simulating something
+    // like EACCES. If the ENOENT narrowing ever regresses back to a
+    // catch-all, this must fail loudly instead of silently reporting the
+    // package as unlicensed.
+    await writePackageFile('eisdir-pkg', 'package.json', JSON.stringify({license: 'MIT'}))
+    await mkdir(join(root, 'node_modules', 'eisdir-pkg', 'LICENSE'), {recursive: true})
+    await writeMetafile('metafile-only.json', {'node_modules/eisdir-pkg/index.js': {}})
+
+    await expect(generateNotices({root, distDir})).rejects.toThrow(
+      expect.objectContaining({code: 'EISDIR'}),
+    )
   })
 })
 
