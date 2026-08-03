@@ -1,7 +1,7 @@
 import {lstat, mkdtemp, mkdir, readFile, readlink, rm, symlink, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {afterEach, beforeEach, describe, expect, test} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import type {PackageManager} from '../detect/package-manager'
 import {symlinksSupported} from '../test-support/symlinks'
 import {THEME_START} from '../theme/apply'
@@ -96,6 +96,61 @@ describe('init', () => {
     expect(await read('src/lib/utils.ts')).toContain('export function cn(')
     expect(await read('src/app/globals.css')).toContain(THEME_START)
     expect(installs).toEqual([{pm: 'pnpm', packages: ['clsx', 'tailwind-merge']}])
+  })
+
+  test('leaves no components.json behind when writing the utility fails partway through', async () => {
+    await nextProject()
+    vi.resetModules()
+    vi.doMock('../fs/atomic-write', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../fs/atomic-write')>()
+
+      return {
+        ...actual,
+        atomicWriteFile: (path: string, contents: string) =>
+          path.endsWith('utils.ts')
+            ? Promise.reject(new Error('disk full'))
+            : actual.atomicWriteFile(path, contents),
+      }
+    })
+
+    try {
+      const {init: mockedInit} = await import('./init')
+
+      await expect(mockedInit(io(), {yes: true})).rejects.toThrow('disk full')
+      await expectAbsent('components.json')
+    } finally {
+      vi.doUnmock('../fs/atomic-write')
+      vi.resetModules()
+    }
+  })
+
+  test('leaves no components.json behind when writing the stylesheet fails partway through', async () => {
+    await nextProject()
+    vi.resetModules()
+    vi.doMock('../fs/atomic-write', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../fs/atomic-write')>()
+
+      return {
+        ...actual,
+        atomicWriteFile: (path: string, contents: string) =>
+          path.endsWith('.css')
+            ? Promise.reject(new Error('disk full'))
+            : actual.atomicWriteFile(path, contents),
+      }
+    })
+
+    try {
+      const {init: mockedInit} = await import('./init')
+
+      await expect(mockedInit(io(), {yes: true})).rejects.toThrow('disk full')
+      await expectAbsent('components.json')
+      // The utility, having no fallible step left after it, is allowed to have
+      // landed already -- only the config marker must not have.
+      expect(await read('src/lib/utils.ts')).toContain('export function cn(')
+    } finally {
+      vi.doUnmock('../fs/atomic-write')
+      vi.resetModules()
+    }
   })
 
   test('refuses a directory with no package.json and writes nothing', async () => {

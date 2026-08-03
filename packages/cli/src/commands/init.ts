@@ -106,8 +106,8 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     return 1
   }
 
-  // Both of these can fail on bad input, so they run before the first write. Once
-  // the config file lands, a later failure would leave a half-configured project.
+  // Both of these can fail on bad input (an unresolvable config shape, an
+  // already-damaged theme block), so they run before the first write.
   let config: Config
   let themed: string
   try {
@@ -118,9 +118,6 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
     return 1
   }
-
-  await atomicWriteFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
-  io.log(`Wrote ${CONFIG_FILE_NAME}`)
 
   // Prefer where tsconfig's `paths` says the alias the user actually chose
   // resolves — not whichever prefix was merely detected, since the prompt can
@@ -152,6 +149,18 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
   await atomicWriteFile(stylesheetPath, themed)
   io.log(`Updated ${answers.css}`)
+
+  // Written last, deliberately: `components.json` is the marker every future
+  // `nat-ui add` trusts to mean "this project is set up", so it must only
+  // land once the writes it depends on have actually succeeded. This is not
+  // full transactional rollback — there is no undo for the utility or
+  // stylesheet writes above once they succeed — it only guarantees that (1)
+  // every fallible validation above ran before any write at all, (2) each
+  // individual file write is atomic on its own (see `atomicWriteFile`), and
+  // (3) the config is written after everything it describes, so it can never
+  // announce a setup that didn't actually finish.
+  await atomicWriteFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
+  io.log(`Wrote ${CONFIG_FILE_NAME}`)
 
   const {command, args} = installCommand(detected.packageManager, INSTALLED_PACKAGES)
   try {
