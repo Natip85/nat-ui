@@ -9,14 +9,20 @@ export interface BundledPackage {
  * deeper (`node_modules/<outer>/node_modules/<inner>/...`). The real package
  * root is always the LAST `node_modules/<name>` segment in the path, not the
  * first, so this walks from the end of the path rather than the start.
+ *
+ * esbuild metafile keys always use forward slashes regardless of platform, but
+ * callers may pass a path produced by `path.resolve()` on Windows, which uses
+ * native backslash separators. Normalising here makes the function safe for
+ * any caller; forward slashes are valid in Node fs calls on Windows too.
  */
 export const resolveBundledPackage = (absolutePath: string): BundledPackage | undefined => {
+  const normalised = absolutePath.replace(/\\/g, '/')
   const marker = 'node_modules/'
-  const markerIndex = absolutePath.lastIndexOf(marker)
+  const markerIndex = normalised.lastIndexOf(marker)
   if (markerIndex === -1) return undefined
 
-  const prefix = absolutePath.slice(0, markerIndex + marker.length)
-  const segments = absolutePath.slice(markerIndex + marker.length).split('/')
+  const prefix = normalised.slice(0, markerIndex + marker.length)
+  const segments = normalised.slice(markerIndex + marker.length).split('/')
   const first = segments[0]
   if (first === undefined || first === '') return undefined
 

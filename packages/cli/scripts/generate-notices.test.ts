@@ -101,6 +101,19 @@ describe('generateNotices', () => {
     expect(content).not.toContain('@nat-ui')
   })
 
+  test('fails loudly when no third-party packages are found in the bundle', async () => {
+    // All inputs are either first-party @nat-ui packages or local source — zero
+    // third-party packages would cause a legally incomplete THIRD_PARTY_NOTICES.
+    await writeMetafile('metafile-only.json', {
+      'node_modules/@nat-ui/schema/dist/index.js': {},
+      'src/index.ts': {},
+    })
+
+    await expect(generateNotices({root, distDir})).rejects.toThrow(
+      /No third-party packages were found/,
+    )
+  })
+
   test('fails loudly when a bundled package has no license file at all', async () => {
     // An SPDX `license` field is not attribution text, so it must not
     // satisfy the check on its own.

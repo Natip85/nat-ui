@@ -49,4 +49,24 @@ describe('resolveBundledPackage', () => {
   test('returns undefined for a malformed scoped segment with no package name after it', () => {
     expect(resolveBundledPackage('/repo/node_modules/@scope')).toBeUndefined()
   })
+
+  test('resolves an unscoped package from a Windows backslash path', () => {
+    const path = 'D:\\a\\nat-ui\\nat-ui\\node_modules\\zod\\index.js'
+
+    expect(resolveBundledPackage(path)).toEqual({
+      name: 'zod',
+      directory: 'D:/a/nat-ui/nat-ui/node_modules/zod',
+    })
+  })
+
+  test('resolves a scoped package from a Windows backslash path', () => {
+    const path =
+      'D:\\a\\nat-ui\\nat-ui\\node_modules\\.pnpm\\@clack+prompts@1.7.0\\node_modules\\@clack\\prompts\\dist\\index.mjs'
+
+    expect(resolveBundledPackage(path)).toEqual({
+      name: '@clack/prompts',
+      directory:
+        'D:/a/nat-ui/nat-ui/node_modules/.pnpm/@clack+prompts@1.7.0/node_modules/@clack/prompts',
+    })
+  })
 })

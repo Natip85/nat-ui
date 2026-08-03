@@ -147,6 +147,15 @@ export const generateNotices = async (
     a.localeCompare(b),
   )
 
+  if (packages.length === 0) {
+    throw new Error(
+      'No third-party packages were found in the bundle. ' +
+        'This CLI always bundles several dependencies; resolving zero packages means ' +
+        'either the metafile is empty or path-separator normalisation failed. ' +
+        'Shipping this would publish a legally incomplete THIRD_PARTY_NOTICES.',
+    )
+  }
+
   const notices = await Promise.all(packages.map(([name, directory]) => noticeFor(name, directory)))
 
   const separator = `\n${'-'.repeat(80)}\n\n`
