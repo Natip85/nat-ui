@@ -1285,6 +1285,13 @@ export const defaultAnswers = (detected: DetectedProject): InitAnswers => {
   }
 }
 
+/**
+ * Clack hands a validator `string | undefined`, since the field can be empty,
+ * so the check has to cover both.
+ */
+const required = (value: string | undefined, message: string): string | undefined =>
+  (value ?? '').trim() === '' ? message : undefined
+
 export const ask: Asker = async (detected) => {
   if (FIRST_PRESET === undefined) throw new Error('No theme presets are defined.')
 
@@ -1299,14 +1306,14 @@ export const ask: Asker = async (detected) => {
     message: 'Where is your global CSS file?',
     placeholder: detected.css ?? 'src/app/globals.css',
     initialValue: detected.css ?? '',
-    validate: (value) => (value.trim() === '' ? 'A stylesheet path is required.' : undefined),
+    validate: (value) => required(value, 'A stylesheet path is required.'),
   })
   if (isCancel(css)) return undefined
 
   const aliasPrefix = await text({
     message: 'What import alias prefix do you use?',
     initialValue: detected.aliasPrefix,
-    validate: (value) => (value.trim() === '' ? 'An alias prefix is required.' : undefined),
+    validate: (value) => required(value, 'An alias prefix is required.'),
   })
   if (isCancel(aliasPrefix)) return undefined
 
