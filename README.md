@@ -31,7 +31,7 @@ project's aliases, so the files land where you already keep things.
 
 ## Development
 
-Requires Node 20.11+ and pnpm 10.
+Requires Node 20.19+ and pnpm 10.
 
 ```bash
 pnpm install
