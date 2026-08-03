@@ -1,9 +1,10 @@
-import {mkdir, writeFile} from 'node:fs/promises'
+import {mkdir} from 'node:fs/promises'
 import {dirname, isAbsolute, join, relative} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
 import {detectProject, toPosixPath} from '../detect/project'
+import {atomicWriteFile} from '../fs/atomic-write'
 import {readText} from '../fs/read-text'
 import {defaultAnswers, type Asker} from '../prompts/ask'
 import {cnTemplate} from '../templates/cn'
@@ -118,7 +119,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     return 1
   }
 
-  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8')
+  await atomicWriteFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
   io.log(`Wrote ${CONFIG_FILE_NAME}`)
 
   // Prefer where tsconfig's `paths` says the alias actually resolves; the
@@ -136,13 +137,13 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
   if ((await readText(absoluteUtils)) === undefined) {
     await mkdir(dirname(absoluteUtils), {recursive: true})
-    await writeFile(absoluteUtils, cnTemplate(answers.tsx), 'utf8')
+    await atomicWriteFile(absoluteUtils, cnTemplate(answers.tsx))
     io.log(`Wrote ${relativeUtils}`)
   } else {
     io.log(`Left ${relativeUtils} alone, since it already exists.`)
   }
 
-  await writeFile(stylesheetPath, themed, 'utf8')
+  await atomicWriteFile(stylesheetPath, themed)
   io.log(`Updated ${answers.css}`)
 
   const {command, args} = installCommand(detected.packageManager, INSTALLED_PACKAGES)
