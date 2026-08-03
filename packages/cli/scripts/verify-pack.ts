@@ -99,9 +99,13 @@ const readBinPath = async (): Promise<string> => {
 }
 
 /**
- * Anything not covered by one of these is either a bug in package.json's
- * `files` field or bloat that slipped past it — either way, worth failing on
- * rather than silently publishing.
+ * This is a *shape* check, not a full manifest: everything under `dist/`
+ * other than a metafile is accepted, since tsup names its chunk files with a
+ * content hash that changes with the code, making a hardcoded list of them
+ * impractical to keep in sync. So a stray non-metafile artifact injected into
+ * `dist/` by some future build change would slip past this — only a bug in
+ * package.json's `files` field that leaks a file from *outside* `dist/`, or a
+ * metafile leaking from inside it, is what this actually catches.
  */
 const isExpectedPath = (path: string): boolean =>
   path === 'package.json' ||
@@ -169,7 +173,10 @@ const main = async (): Promise<void> => {
       return
     }
 
-    console.log(`Verified packed tarball for @nat-ui/cli (${String(files.length)} files).`)
+    console.log(
+      `Verified packed tarball shape for @nat-ui/cli (${String(files.length)} files; ` +
+        `contents of dist/ are not individually enumerated).`,
+    )
   } finally {
     await rm(workDir, {recursive: true, force: true})
   }

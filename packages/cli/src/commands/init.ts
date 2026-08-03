@@ -1,5 +1,5 @@
 import {mkdir} from 'node:fs/promises'
-import {dirname, isAbsolute, join, relative} from 'node:path'
+import {dirname, isAbsolute, join, relative, sep} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
@@ -28,11 +28,15 @@ export const INSTALLED_PACKAGES = ['clsx', 'tailwind-merge'] as const
  * a stylesheet that is itself a symlink pointing outside the project (a real
  * monorepo pattern) is still accepted. Only a path that already reads outside the
  * project root, like `../../elsewhere.css`, is refused.
+ *
+ * Checks for a leading `..` *segment* rather than just the characters `..`, so a
+ * legitimately in-root name that merely starts with two dots — `..styles/globals.css`,
+ * naming a real directory called `..styles` — is not mistaken for an escape.
  */
 const isWithinRoot = (root: string, target: string): boolean => {
   const rel = relative(root, target)
 
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+  return !isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)
 }
 
 /** `@/lib/utils` with prefix `@` and a paths target rooted at `src` → `src/lib/utils.ts`. */
@@ -52,7 +56,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     return 1
   }
   if (detected.packageJsonParseError) {
-    io.log('package.json could not be parsed. Fix it and run init again.')
+    io.log('Could not parse package.json. Fix it and run init again.')
 
     return 1
   }
@@ -63,7 +67,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     // must decline here rather than prompt, exactly like a non-TTY does.
     const overwrite = io.interactive && !options.yes ? await io.confirmOverwrite() : false
     if (!overwrite) {
-      io.log(`${CONFIG_FILE_NAME} already exists. Nothing was changed.`)
+      io.log(`Found an existing ${CONFIG_FILE_NAME}. Nothing was changed.`)
 
       return 0
     }
@@ -94,7 +98,9 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
   const stylesheetPath = join(io.cwd, answers.css)
   if (!isWithinRoot(io.cwd, stylesheetPath)) {
-    io.log(`${answers.css} resolves outside the project. Choose a stylesheet inside ${io.cwd}.`)
+    io.log(
+      `${answers.css} resolves outside the project. Choose a stylesheet inside the project root.`,
+    )
 
     return 1
   }

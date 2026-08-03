@@ -252,6 +252,31 @@ describe('init', () => {
     expect(await read('src/lib/utils.ts')).toContain('export function cn(')
   })
 
+  test('accepts a stylesheet whose relative path merely starts with two literal dots', async () => {
+    // `..config` is a real, in-root directory name here -- not a parent
+    // reference -- so this must not be confused with an escape like `../config`.
+    await write('package.json', '{}')
+    await write('..config/globals.css', "@import 'tailwindcss';\n")
+
+    const code = await init(
+      io({
+        interactive: true,
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: '..config/globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
+
+    expect(code).toBe(0)
+    expect(await read('..config/globals.css')).toContain('nat-ui theme')
+  })
+
   test('refuses a stylesheet path that resolves outside the project root, before writing anything', async () => {
     await write('package.json', '{}')
 
@@ -272,6 +297,9 @@ describe('init', () => {
 
     expect(code).toBe(1)
     expect(logs.join('\n')).toMatch(/outside the project/)
+    // The message must guide the user without leaking the machine's absolute
+    // filesystem layout back at them.
+    expect(logs.join('\n')).not.toContain(cwd)
     await expectAbsent(...UNWRITTEN)
     expect(installs).toEqual([])
   })

@@ -1,4 +1,5 @@
 import {confirm, isCancel, select, text} from '@clack/prompts'
+import {CONFIG_FILE_NAME} from '@nat-ui/schema'
 import type {InitAnswers} from '../config/resolve'
 import type {DetectedProject} from '../detect/project'
 import {PRESET_CHOICES} from '../theme/presets'
@@ -74,7 +75,7 @@ export const ask: Asker = async (detected) => {
 
 export const confirmOverwrite = async (): Promise<boolean> => {
   const answer = await confirm({
-    message: 'components.json already exists. Overwrite it?',
+    message: `Found an existing ${CONFIG_FILE_NAME}. Overwrite it?`,
     initialValue: false,
   })
 
