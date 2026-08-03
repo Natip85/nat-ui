@@ -27,6 +27,22 @@ export const help = `
 
 type Log = (message: string) => void
 
+// Only argument-parsing failures become usage errors; anything else is a bug
+// and should surface as one rather than being reported as bad input.
+const isUsageError = (error: unknown): error is Error =>
+  error instanceof Error &&
+  'code' in error &&
+  typeof error.code === 'string' &&
+  error.code.startsWith('ERR_PARSE_ARGS_')
+
+// Node follows "Unknown option '--yse'." with advice about passing positionals
+// after `--`, which is irrelevant to a typo, so keep only the first sentence.
+const firstSentence = (message: string): string => {
+  const [first] = message.split('. ')
+
+  return first === undefined ? message : `${first}.`
+}
+
 export const run = async (argv: readonly string[], log: Log): Promise<number> => {
   let values: {yes: boolean; version: boolean; help: boolean}
   let positionals: string[]
@@ -43,10 +59,11 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
       strict: true,
     }))
   } catch (error) {
-    // parseArgs throws a TypeError (code ERR_PARSE_ARGS_UNKNOWN_OPTION) for
-    // flags like `--yse` now that strict parsing is on; surface its message
-    // instead of letting the raw stack trace reach the user.
-    log(`${error instanceof Error ? error.message : String(error)}\n${help}`)
+    if (!isUsageError(error)) {
+      throw error
+    }
+
+    log(`${firstSentence(error.message)}\n${help}`)
 
     return 1
   }

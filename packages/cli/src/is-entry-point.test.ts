@@ -54,4 +54,13 @@ describe('isEntryPoint', () => {
   test('returns false rather than throwing for a non-existent entry', () => {
     expect(isEntryPoint('file:///anything.js', join(root, 'missing.js'))).toBe(false)
   })
+
+  test('matches a path that does not exist when it equals the module URL', () => {
+    // Under `--preserve-symlinks-main` the direct comparison is the only one
+    // that can match, so it has to be tried before realpath. A missing path
+    // pins that order: realpath would throw here and report no match.
+    const missing = join(root, 'missing.js')
+
+    expect(isEntryPoint(pathToFileURL(missing).href, missing)).toBe(true)
+  })
 })

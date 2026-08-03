@@ -56,8 +56,11 @@ describe('run', () => {
     const lines: string[] = []
 
     expect(await run(['--yse'], (message) => lines.push(message))).toBe(1)
-    expect(lines.join('\n')).toContain('--yse')
+    expect(lines.join('\n')).toContain("Unknown option '--yse'.")
     expect(lines.join('\n')).toContain('Usage')
+    // Node's own message goes on to suggest passing the flag after `--`, which
+    // only applies to positionals and reads as nonsense advice for a typo.
+    expect(lines.join('\n')).not.toContain('place it at the end')
   })
 
   test('rejects an unknown short flag with exit code 1 and a helpful message', async () => {
