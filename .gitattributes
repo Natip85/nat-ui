@@ -1,0 +1,4 @@
+# Check every text file out with LF on all platforms. Windows otherwise
+# converts to CRLF on checkout, and `prettier --check` (which defaults to
+# endOfLine: "lf") then rejects every file in the repository.
+* text=auto eol=lf
