@@ -16,8 +16,22 @@ pnpm dlx @nat-ui/cli@latest init
 pnpm dlx @nat-ui/cli@latest add button
 ```
 
-`init` writes a config file describing where your components, utils, and hooks
-live. Every later `add` reads that config and rewrites imports to match your
+`init` asks where your stylesheet and import aliases live, writes
+`components.json` recording those answers, creates a `cn` helper at your `utils`
+alias, writes theme variables into your stylesheet, and installs `clsx` and
+`tailwind-merge` with your detected package manager. Pick between the
+`neutral` (default) and `slate` base colors when prompted. Pass `--yes` (or
+`-y`) to accept every detected default without being asked — the same
+defaults apply automatically when stdin isn't a TTY, except that a stylesheet
+already importing `tailwindcss` must be found; if none is, run `init`
+interactively so you can point it at one.
+
+Re-running `init` is safe: it updates the theme block in your stylesheet in
+place instead of duplicating it. If `components.json` already exists, `init`
+asks whether to overwrite it (defaulting to no), or, under `--yes` or a
+non-interactive shell, leaves it untouched automatically.
+
+Every later `add` reads that config and rewrites imports to match your
 project's aliases, so the files land where you already keep things.
 
 ## Repository layout
