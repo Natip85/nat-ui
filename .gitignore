@@ -12,6 +12,10 @@ out/
 .eslintcache
 *.log
 
+# Scratch space for subagent-driven execution: progress ledger, task briefs,
+# implementer reports, and review packages.
+.superpowers/
+
 .DS_Store
 .vscode/
 .idea/

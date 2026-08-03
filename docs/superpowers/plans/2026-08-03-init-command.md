@@ -32,6 +32,7 @@ Created under `packages/cli/`:
 | Path                            | Responsibility                                                          |
 | ------------------------------- | ----------------------------------------------------------------------- |
 | `src/detect/package-manager.ts` | Lockfile list and user agent → package manager, and its install command |
+| `src/fs/read-text.ts`           | Reading a file or probing a directory without throwing                  |
 | `src/detect/project.ts`         | Inspect a directory → detected defaults                                 |
 | `src/config/resolve.ts`         | Answers → validated `Config`; owns the `InitAnswers` type               |
 | `src/theme/presets.ts`          | The two theme presets as token maps                                     |
@@ -765,18 +766,108 @@ git commit -m "feat(cli): resolve answers into a validated config"
 
 **Files:**
 
+- Create: `packages/cli/src/fs/read-text.ts`
+- Test: `packages/cli/src/fs/read-text.test.ts`
 - Create: `packages/cli/src/detect/project.ts`
 - Test: `packages/cli/src/detect/project.test.ts`
 
 **Interfaces:**
 
 - Consumes: `detectPackageManager`, `type PackageManager` from `./package-manager`.
-- Produces:
+- Produces from `fs/read-text.ts`, shared with Task 8 so the helper exists once:
+  - `readText(path: string): Promise<string | undefined>`
+  - `fileExists(path: string): Promise<boolean>`
+  - `directoryExists(path: string): Promise<boolean>`
+- Produces from `detect/project.ts`:
   - `type DetectedProject = {hasPackageJson: boolean; hasTsconfig: boolean; css: string | undefined; aliasPrefix: string; tsx: boolean; rsc: boolean; packageManager: PackageManager}`
   - `const CSS_CANDIDATES: readonly string[]`
   - `detectProject(cwd: string, env: NodeJS.ProcessEnv): Promise<DetectedProject>`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the failing test for the filesystem helpers**
+
+Create `packages/cli/src/fs/read-text.test.ts`:
+
+```ts
+import {mkdtemp, mkdir, writeFile} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {beforeEach, describe, expect, test} from 'vitest'
+import {directoryExists, fileExists, readText} from './read-text'
+
+let root: string
+
+beforeEach(async () => {
+  root = await mkdtemp(join(tmpdir(), 'nat-ui-fs-'))
+  await writeFile(join(root, 'file.txt'), 'contents\n', 'utf8')
+  await mkdir(join(root, 'dir'))
+})
+
+describe('readText', () => {
+  test('returns the contents of a file', async () => {
+    expect(await readText(join(root, 'file.txt'))).toBe('contents\n')
+  })
+
+  test('returns undefined instead of throwing when the path is missing', async () => {
+    expect(await readText(join(root, 'nope.txt'))).toBeUndefined()
+  })
+
+  test('returns undefined for a directory', async () => {
+    expect(await readText(join(root, 'dir'))).toBeUndefined()
+  })
+})
+
+describe('fileExists', () => {
+  test('distinguishes a file from a missing path', async () => {
+    expect(await fileExists(join(root, 'file.txt'))).toBe(true)
+    expect(await fileExists(join(root, 'nope.txt'))).toBe(false)
+  })
+})
+
+describe('directoryExists', () => {
+  test('distinguishes a directory from a file and from nothing', async () => {
+    expect(await directoryExists(join(root, 'dir'))).toBe(true)
+    expect(await directoryExists(join(root, 'file.txt'))).toBe(false)
+    expect(await directoryExists(join(root, 'nope'))).toBe(false)
+  })
+})
+```
+
+- [ ] **Step 2: Write the filesystem helpers**
+
+Run `pnpm vitest run packages/cli/src/fs/read-text.test.ts` first and confirm it fails on the missing module, then create `packages/cli/src/fs/read-text.ts`:
+
+```ts
+import {readFile, readdir} from 'node:fs/promises'
+
+/**
+ * Init inspects paths that are routinely absent, so absence is an answer here
+ * rather than an exception every caller has to catch.
+ */
+export const readText = async (path: string): Promise<string | undefined> => {
+  try {
+    return await readFile(path, 'utf8')
+  } catch {
+    return undefined
+  }
+}
+
+export const fileExists = async (path: string): Promise<boolean> =>
+  (await readText(path)) !== undefined
+
+export const directoryExists = async (path: string): Promise<boolean> => {
+  try {
+    await readdir(path)
+
+    return true
+  } catch {
+    return false
+  }
+}
+```
+
+Expected: PASS, 5 tests.
+
+- [ ] **Step 3: Write the failing test for project detection**
 
 Create `packages/cli/src/detect/project.test.ts`:
 
@@ -883,18 +974,19 @@ describe('detectProject', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 4: Run test to verify it fails**
 
 Run: `pnpm vitest run packages/cli/src/detect/project.test.ts`
 Expected: FAIL — cannot resolve `./project`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [ ] **Step 5: Write minimal implementation**
 
 Create `packages/cli/src/detect/project.ts`:
 
 ```ts
-import {readFile, readdir} from 'node:fs/promises'
+import {readdir} from 'node:fs/promises'
 import {join} from 'node:path'
+import {directoryExists, fileExists, readText} from '../fs/read-text'
 import {detectPackageManager, type PackageManager} from './package-manager'
 
 export type DetectedProject = {
@@ -917,16 +1009,6 @@ export const CSS_CANDIDATES = [
 ] as const
 
 const DEFAULT_ALIAS_PREFIX = '@'
-
-const readText = async (path: string): Promise<string | undefined> => {
-  try {
-    return await readFile(path, 'utf8')
-  } catch {
-    return undefined
-  }
-}
-
-const exists = async (path: string): Promise<boolean> => (await readText(path)) !== undefined
 
 const readJson = async (path: string): Promise<Record<string, unknown> | undefined> => {
   const text = await readText(path)
@@ -978,8 +1060,8 @@ export const detectProject = async (
   const pkg = await readJson(join(cwd, 'package.json'))
   const tsconfig = await readJson(join(cwd, 'tsconfig.json'))
 
-  const hasPackageJson = await exists(join(cwd, 'package.json'))
-  const hasTsconfig = await exists(join(cwd, 'tsconfig.json'))
+  const hasPackageJson = await fileExists(join(cwd, 'package.json'))
+  const hasTsconfig = await fileExists(join(cwd, 'tsconfig.json'))
 
   const hasAppDir =
     (await directoryExists(join(cwd, 'app'))) || (await directoryExists(join(cwd, 'src/app')))
@@ -1004,29 +1086,19 @@ const listDirectory = async (path: string): Promise<string[]> => {
     return []
   }
 }
-
-const directoryExists = async (path: string): Promise<boolean> => {
-  try {
-    await readdir(path)
-
-    return true
-  } catch {
-    return false
-  }
-}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 6: Run test to verify it passes**
 
 Run: `pnpm vitest run packages/cli/src/detect/project.test.ts`
 Expected: PASS, 8 tests.
 
-Note on why there are two existence helpers: `readText` fails on a directory, so `exists` answers only "is there a readable file here". `directoryExists` uses `readdir` and is what the app-directory check needs. Do not collapse them.
+Note on why `fs/read-text.ts` has both existence helpers: `readText` fails on a directory, so `fileExists` answers only "is there a readable file here". `directoryExists` uses `readdir` and is what the app-directory check needs. Do not collapse them.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add packages/cli/src/detect/
+git add packages/cli/src/fs/ packages/cli/src/detect/
 git commit -m "feat(cli): detect project layout, aliases, and stylesheet"
 ```
 
@@ -1040,6 +1112,7 @@ git commit -m "feat(cli): detect project layout, aliases, and stylesheet"
 - Test: `packages/cli/src/prompts/ask.test.ts`
 - Modify: `pnpm-workspace.yaml` (add `@clack/prompts` to the catalog)
 - Modify: `packages/cli/package.json` (add `@clack/prompts` as a devDependency)
+- Modify: `packages/cli/tsup.config.ts` (bundle `@clack/prompts`)
 
 **Interfaces:**
 
@@ -1063,6 +1136,17 @@ In `packages/cli/package.json`, add to `devDependencies` in alphabetical order:
 ```json
     "@clack/prompts": "catalog:",
 ```
+
+In `packages/cli/tsup.config.ts`, add it to `noExternal`:
+
+```ts
+  noExternal: [/^@nat-ui\//, 'zod', '@clack/prompts'],
+```
+
+That last edit belongs here rather than in a later task: the package is a
+devDependency, so if the bundler treated it as external, the built CLI would
+carry an import that nothing declares. Adding the dependency and bundling it are
+one change.
 
 Run: `pnpm install`
 Expected: lockfile updates, install succeeds.
@@ -1199,15 +1283,21 @@ export const confirmOverwrite = async (): Promise<boolean> => {
 Run: `pnpm vitest run packages/cli/src/prompts/ask.test.ts`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 6: Verify the bundle still has no runtime dependencies**
+- [ ] **Step 6: Verify the bundle carries the dependency rather than importing it**
 
-Run: `pnpm --filter @nat-ui/cli build && node -e "const p=require('./packages/cli/package.json');console.log(p.dependencies)"`
-Expected: `undefined` — `@clack/prompts` is a devDependency and gets bundled.
+```bash
+pnpm --filter @nat-ui/cli build
+node -e "const p=require('./packages/cli/package.json');console.log(p.dependencies)"
+grep -c "@clack/prompts" packages/cli/dist/index.js || echo "no bare import, correctly bundled"
+```
+
+Expected: `undefined` for `dependencies`, and no bare `@clack/prompts` import left in
+the bundle.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add pnpm-workspace.yaml pnpm-lock.yaml packages/cli/package.json packages/cli/src/prompts/
+git add pnpm-workspace.yaml pnpm-lock.yaml packages/cli/package.json packages/cli/tsup.config.ts packages/cli/src/prompts/
 git commit -m "feat(cli): add init prompts with detected defaults"
 ```
 
@@ -1460,12 +1550,13 @@ Expected: FAIL — cannot resolve `./init`.
 Create `packages/cli/src/commands/init.ts`:
 
 ```ts
-import {mkdir, readFile, writeFile} from 'node:fs/promises'
+import {mkdir, writeFile} from 'node:fs/promises'
 import {dirname, join} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
 import {detectProject} from '../detect/project'
+import {readText} from '../fs/read-text'
 import {defaultAnswers, type Asker} from '../prompts/ask'
 import {cnTemplate} from '../templates/cn'
 import {applyTheme} from '../theme/apply'
@@ -1482,14 +1573,6 @@ export type InitIo = {
 }
 
 export const INSTALLED_PACKAGES = ['clsx', 'tailwind-merge'] as const
-
-const readText = async (path: string): Promise<string | undefined> => {
-  try {
-    return await readFile(path, 'utf8')
-  } catch {
-    return undefined
-  }
-}
 
 /** `@/lib/utils` with prefix `@` and tsconfig paths rooted at src → `src/lib/utils.ts`. */
 const utilsPath = (alias: string, prefix: string, underSrc: boolean, tsx: boolean): string => {
@@ -1825,7 +1908,8 @@ git commit -m "feat(cli): dispatch init from the entry point"
 
 - [ ] **Step 1: Enable the metafile and the hook**
 
-Rewrite `packages/cli/tsup.config.ts`:
+`noExternal` already lists `@clack/prompts` from Task 7; the two additions here are
+`metafile` and `onSuccess`. Rewrite `packages/cli/tsup.config.ts`:
 
 ```ts
 import {defineConfig} from 'tsup'
