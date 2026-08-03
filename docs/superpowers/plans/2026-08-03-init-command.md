@@ -502,18 +502,6 @@ partial block is an error the user has to resolve.
 
 Both markers missing is a different case and is not detectable — a stylesheet with no
 markers is indistinguishable from one that was never initialized but happens to define its
-own `:root` block. That limitation stands. — throws when it finds a
-partial block
-
-A partial block means exactly one of the two markers is present, or they appear in the
-wrong order. Falling through and inserting a fresh block in that situation is worse than
-failing: the orphaned rules from the previous run stay in the file _below_ the new block,
-and since they are equal-specificity selectors appearing later, the stale values win in
-the browser. The user would pick a new style, be told it worked, and see no change. So a
-partial block is an error the user has to resolve.
-
-Both markers missing is a different case and is not detectable — a stylesheet with no
-markers is indistinguishable from one that was never initialized but happens to define its
 own `:root` block. That limitation stands.
 
 - [ ] **Step 1: Write the failing test**
