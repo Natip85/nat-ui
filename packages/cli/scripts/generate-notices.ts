@@ -3,31 +3,70 @@ import {resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {resolveBundledPackage} from './resolve-bundled-package'
 
-const ROOT = fileURLToPath(new URL('../', import.meta.url))
-const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
-
-const LICENSE_NAMES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'license']
+// Priority order for which file wins when a package ships more than one.
+// LICENSE-family names come before the older COPYING convention.
+export const LICENSE_NAMES = [
+  'LICENSE',
+  'LICENSE.md',
+  'LICENSE.txt',
+  'LICENCE',
+  'LICENCE.md',
+  'LICENCE.txt',
+  'license',
+  'COPYING',
+  'COPYING.md',
+] as const
 
 interface Metafile {
   readonly inputs: Record<string, unknown>
 }
 
-const readMetafile = async (): Promise<Metafile> => {
-  const files = await readdir(DIST)
-  const name = files.find((file) => file.startsWith('metafile-'))
-  if (name === undefined) throw new Error('No tsup metafile found in dist/.')
+interface ErrnoLike {
+  readonly code?: string
+}
 
-  const parsed: unknown = JSON.parse(await readFile(resolve(DIST, name), 'utf8'))
-  if (typeof parsed !== 'object' || parsed === null || !('inputs' in parsed)) {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const isEnoent = (error: unknown): boolean =>
+  error instanceof Error && (error as Error & ErrnoLike).code === 'ENOENT'
+
+const parseMetafile = (raw: string): Metafile => {
+  const parsed: unknown = JSON.parse(raw)
+  if (!isRecord(parsed) || !('inputs' in parsed)) {
     throw new Error('Unexpected metafile shape: missing "inputs".')
   }
 
   const {inputs} = parsed
-  if (typeof inputs !== 'object' || inputs === null) {
+  if (!isRecord(inputs)) {
     throw new Error('Unexpected metafile shape: "inputs" is not an object.')
   }
 
-  return {inputs: inputs as Record<string, unknown>}
+  return {inputs}
+}
+
+/**
+ * Reads every metafile-*.json in dist, not just one. tsup emits one per
+ * output format; today that's a single ESM file, but if a second format is
+ * ever added, a package unique to it must not be silently dropped. The
+ * sorted filename order is what makes the merge deterministic, not
+ * whatever order readdir() happens to return.
+ */
+export const readMetafiles = async (distDir: string): Promise<Metafile> => {
+  const names = (await readdir(distDir))
+    .filter((file) => file.startsWith('metafile-') && file.endsWith('.json'))
+    .sort()
+
+  if (names.length === 0) throw new Error('No tsup metafile found in dist/.')
+
+  const contents = await Promise.all(names.map((name) => readFile(resolve(distDir, name), 'utf8')))
+
+  const inputs: Record<string, unknown> = {}
+  for (const raw of contents) {
+    Object.assign(inputs, parseMetafile(raw).inputs)
+  }
+
+  return {inputs}
 }
 
 /**
@@ -36,13 +75,16 @@ const readMetafile = async (): Promise<Metafile> => {
  * choice is deterministic if a name were ever to resolve to more than one
  * physical location; in practice every package here resolves to exactly one.
  */
-const bundledPackages = (inputs: Record<string, unknown>): ReadonlyMap<string, string> => {
+export const bundledPackages = (
+  inputs: Record<string, unknown>,
+  root: string,
+): ReadonlyMap<string, string> => {
   const byName = new Map<string, string>()
 
   for (const key of Object.keys(inputs)) {
     if (!key.includes('node_modules/')) continue
 
-    const pkg = resolveBundledPackage(resolve(ROOT, key))
+    const pkg = resolveBundledPackage(resolve(root, key))
     if (pkg === undefined || pkg.name.startsWith('@nat-ui/')) continue
 
     const existing = byName.get(pkg.name)
@@ -54,20 +96,18 @@ const bundledPackages = (inputs: Record<string, unknown>): ReadonlyMap<string, s
   return byName
 }
 
-const noticeFor = async (name: string, directory: string): Promise<string> => {
+export const noticeFor = async (name: string, directory: string): Promise<string> => {
   const manifest: unknown = JSON.parse(await readFile(resolve(directory, 'package.json'), 'utf8'))
-  const license =
-    typeof manifest === 'object' && manifest !== null && 'license' in manifest
-      ? String(manifest.license)
-      : 'unknown'
+  const license = isRecord(manifest) && 'license' in manifest ? String(manifest.license) : 'unknown'
 
   for (const candidate of LICENSE_NAMES) {
     try {
       const text = await readFile(resolve(directory, candidate), 'utf8')
 
       return `${name}\n\n${text.trim()}\n`
-    } catch {
-      continue
+    } catch (error) {
+      if (isEnoent(error)) continue
+      throw error
     }
   }
 
@@ -90,21 +130,43 @@ This file is generated at build time from the bundle itself, so it cannot drift
 from what actually ships.
 `
 
-const main = async (): Promise<void> => {
-  const {inputs} = await readMetafile()
-  const packages = [...bundledPackages(inputs).entries()].sort(([a], [b]) => a.localeCompare(b))
+export interface GenerateNoticesOptions {
+  readonly root: string
+  readonly distDir: string
+}
+
+export interface GeneratedNotices {
+  readonly content: string
+  readonly packageCount: number
+}
+
+export const generateNotices = async (
+  options: GenerateNoticesOptions,
+): Promise<GeneratedNotices> => {
+  const {inputs} = await readMetafiles(options.distDir)
+  const packages = [...bundledPackages(inputs, options.root).entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )
 
   const notices = await Promise.all(packages.map(([name, directory]) => noticeFor(name, directory)))
 
   const separator = `\n${'-'.repeat(80)}\n\n`
 
-  await writeFile(
-    resolve(DIST, 'THIRD_PARTY_NOTICES'),
-    [HEADER, ...notices].join(separator),
-    'utf8',
-  )
+  return {
+    content: [HEADER, ...notices].join(separator),
+    packageCount: packages.length,
+  }
+}
 
-  console.log(`Wrote dist/THIRD_PARTY_NOTICES for ${String(packages.length)} package(s).`)
+const ROOT = fileURLToPath(new URL('../', import.meta.url))
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
+
+const main = async (): Promise<void> => {
+  const {content, packageCount} = await generateNotices({root: ROOT, distDir: DIST})
+
+  await writeFile(resolve(ROOT, 'THIRD_PARTY_NOTICES'), content, 'utf8')
+
+  console.log(`Wrote THIRD_PARTY_NOTICES for ${String(packageCount)} package(s).`)
 }
 
 await main()
