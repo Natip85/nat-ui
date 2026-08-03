@@ -490,7 +490,31 @@ git commit -m "feat(cli): add neutral and slate theme presets"
 - Produces:
   - `const THEME_START = '/* nat-ui theme start */'`
   - `const THEME_END = '/* nat-ui theme end */'`
-  - `applyTheme(stylesheet: string, preset: ThemePreset): string`
+  - `applyTheme(stylesheet: string, preset: ThemePreset): string` — throws when it finds a
+    partial block
+
+A partial block means exactly one of the two markers is present, or they appear in the
+wrong order. Falling through and inserting a fresh block in that situation is worse than
+failing: the orphaned rules from the previous run stay in the file _below_ the new block,
+and since they are equal-specificity selectors appearing later, the stale values win in
+the browser. The user would pick a new style, be told it worked, and see no change. So a
+partial block is an error the user has to resolve.
+
+Both markers missing is a different case and is not detectable — a stylesheet with no
+markers is indistinguishable from one that was never initialized but happens to define its
+own `:root` block. That limitation stands. — throws when it finds a
+partial block
+
+A partial block means exactly one of the two markers is present, or they appear in the
+wrong order. Falling through and inserting a fresh block in that situation is worse than
+failing: the orphaned rules from the previous run stay in the file _below_ the new block,
+and since they are equal-specificity selectors appearing later, the stale values win in
+the browser. The user would pick a new style, be told it worked, and see no change. So a
+partial block is an error the user has to resolve.
+
+Both markers missing is a different case and is not detectable — a stylesheet with no
+markers is indistinguishable from one that was never initialized but happens to define its
+own `:root` block. That limitation stands.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -504,6 +528,10 @@ import {PRESETS} from './presets'
 const withImport = "@import 'tailwindcss';\n\n.app {\n  color: red;\n}\n"
 
 const countOf = (haystack: string, needle: string): number => haystack.split(needle).length - 1
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 describe('applyTheme', () => {
   test('inserts a marked block after the tailwindcss import', () => {
@@ -546,6 +574,32 @@ describe('applyTheme', () => {
     expect(asSlate).not.toContain('--foreground: oklch(0.145 0 0);')
   })
 
+  test('refuses a stylesheet carrying only the start marker', () => {
+    const damaged = applyTheme(withImport, PRESETS.neutral).replace(THEME_START, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/nat-ui theme/)
+  })
+
+  test('refuses a stylesheet carrying only the end marker', () => {
+    const damaged = applyTheme(withImport, PRESETS.neutral).replace(THEME_END, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/nat-ui theme/)
+  })
+
+  test('refuses markers in the wrong order', () => {
+    const damaged = `${THEME_END}\n:root {\n}\n${THEME_START}\n`
+
+    expect(() => applyTheme(damaged, PRESETS.neutral)).toThrow(/nat-ui theme/)
+  })
+
+  test('names both markers in the error, so the user can find them', () => {
+    const damaged = applyTheme(withImport, PRESETS.neutral).replace(THEME_START, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(
+      new RegExp(`${escapeRegExp(THEME_START)}[\\s\\S]*${escapeRegExp(THEME_END)}`),
+    )
+  })
+
   test('prepends when the stylesheet has no tailwindcss import', () => {
     const result = applyTheme('.app {\n  color: red;\n}\n', PRESETS.neutral)
 
@@ -557,6 +611,36 @@ describe('applyTheme', () => {
     const result = applyTheme('@import "tailwindcss";\n', PRESETS.neutral)
 
     expect(result.indexOf('tailwindcss')).toBeLessThan(result.indexOf(THEME_START))
+  })
+})
+
+describe('applyTheme with a partial block', () => {
+  const applied = applyTheme(withImport, PRESETS.neutral)
+
+  test('refuses a block whose start marker was removed', () => {
+    const damaged = applied.replace(`${THEME_START}\n`, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
+  })
+
+  test('refuses a block whose end marker was removed', () => {
+    const damaged = applied.replace(THEME_END, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
+  })
+
+  test('refuses markers in the wrong order', () => {
+    const damaged = `${THEME_END}\n:root {\n  --background: red;\n}\n${THEME_START}\n`
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(/theme/i)
+  })
+
+  test('names both markers so the user knows what to repair', () => {
+    const damaged = applied.replace(`${THEME_START}\n`, '')
+
+    expect(() => applyTheme(damaged, PRESETS.slate)).toThrow(
+      new RegExp(`${escapeRegExp(THEME_START)}[\\s\\S]*${escapeRegExp(THEME_END)}`),
+    )
   })
 })
 ```
@@ -602,7 +686,21 @@ export const applyTheme = (stylesheet: string, preset: ThemePreset): string => {
 
   const start = stylesheet.indexOf(THEME_START)
   const end = stylesheet.indexOf(THEME_END)
-  if (start !== -1 && end > start) {
+  const hasStart = start !== -1
+  const hasEnd = end !== -1
+
+  // Inserting a fresh block alongside a half-marked one would leave the previous
+  // run's rules below the new ones, where they win the cascade and silently
+  // override the style the user just picked. Refuse instead.
+  if (hasStart !== hasEnd || (hasStart && end < start)) {
+    throw new Error(
+      `Your stylesheet has an incomplete nat-ui theme block. It needs both ${THEME_START} ` +
+        `and ${THEME_END}, in that order. Restore the missing marker or delete the leftover ` +
+        `block, then run init again.`,
+    )
+  }
+
+  if (hasStart && hasEnd) {
     return stylesheet.slice(0, start) + next + stylesheet.slice(end + THEME_END.length)
   }
 
@@ -618,7 +716,7 @@ export const applyTheme = (stylesheet: string, preset: ThemePreset): string => {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm vitest run packages/cli/src/theme/apply.test.ts`
-Expected: PASS, 7 tests.
+Expected: PASS, 11 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1514,6 +1612,25 @@ describe('init', () => {
     await expect(read('components.json')).rejects.toThrow()
   })
 
+  test('refuses an incomplete theme block without touching anything', async () => {
+    await nextProject()
+    await init(io(), {yes: true})
+    const applied = await read('src/app/globals.css')
+    await write('src/app/globals.css', applied.replace(THEME_START, ''))
+    await write('components.json', '{"existing": true}')
+
+    const code = await init(
+      io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}),
+      {
+        yes: true,
+      },
+    )
+
+    expect(code).toBe(1)
+    expect(logs.join('\n')).toMatch(/nat-ui theme/)
+    expect(await read('components.json')).toContain('existing')
+  })
+
   test('warns but continues when TypeScript is chosen without a tsconfig', async () => {
     await write('package.json', '{}')
     await write('app/globals.css', "@import 'tailwindcss';\n")
@@ -1629,9 +1746,16 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     return 1
   }
 
+  // Both of these can fail on bad input, so they run before the first write. Once
+  // the config file lands, a later failure would leave a half-configured project.
   let config: Config
+  let themed: string
   try {
     config = resolveConfig(answers)
+    // Only two of the five base colours the schema allows have a preset. Anything
+    // else reaches here only by hand-editing components.json, and falls back to
+    // neutral rather than leaving the stylesheet without tokens.
+    themed = applyTheme(stylesheet, PRESETS[answers.baseColor === 'slate' ? 'slate' : 'neutral'])
   } catch (error) {
     io.log(error instanceof Error ? error.message : String(error))
 
@@ -1658,11 +1782,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     io.log(`Left ${relativeUtils} alone, since it already exists.`)
   }
 
-  // Only two of the five base colours the schema allows have a preset. Anything
-  // else reaches here only by hand-editing components.json, and falls back to
-  // neutral rather than leaving the stylesheet without tokens.
-  const preset = PRESETS[answers.baseColor === 'slate' ? 'slate' : 'neutral']
-  await writeFile(stylesheetPath, applyTheme(stylesheet, preset), 'utf8')
+  await writeFile(stylesheetPath, themed, 'utf8')
   io.log(`Updated ${answers.css}`)
 
   const {command, args} = installCommand(detected.packageManager, INSTALLED_PACKAGES)
@@ -1683,7 +1803,7 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm vitest run packages/cli/src/commands/init.test.ts`
-Expected: PASS, 12 tests.
+Expected: PASS, 13 tests.
 
 - [ ] **Step 5: Run the whole suite and the type checker**
 
