@@ -3,6 +3,7 @@ import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {afterEach, beforeEach, describe, expect, test} from 'vitest'
 import type {PackageManager} from '../detect/package-manager'
+import {symlinksSupported} from '../test-support/symlinks'
 import {THEME_START} from '../theme/apply'
 import {init, type InitIo} from './init'
 
@@ -274,24 +275,27 @@ describe('init', () => {
     expect(logs.join('\n')).toMatch(/utils\.ts/)
   })
 
-  test('updates a symlinked stylesheet through the link without breaking it', async () => {
-    await nextProject()
-    externalDir = await mkdtemp(join(tmpdir(), 'nat-ui-init-external-'))
-    const externalCss = join(externalDir, 'globals.css')
-    await writeFile(externalCss, "@import 'tailwindcss';\n", 'utf8')
-    const linkPath = join(cwd, 'src/app/globals.css')
-    await rm(linkPath)
-    await symlink(externalCss, linkPath)
+  test.skipIf(!symlinksSupported)(
+    'updates a symlinked stylesheet through the link without breaking it',
+    async () => {
+      await nextProject()
+      externalDir = await mkdtemp(join(tmpdir(), 'nat-ui-init-external-'))
+      const externalCss = join(externalDir, 'globals.css')
+      await writeFile(externalCss, "@import 'tailwindcss';\n", 'utf8')
+      const linkPath = join(cwd, 'src/app/globals.css')
+      await rm(linkPath)
+      await symlink(externalCss, linkPath)
 
-    const code = await init(io(), {yes: true})
+      const code = await init(io(), {yes: true})
 
-    expect(code).toBe(0)
-    const linkStat = await lstat(linkPath)
-    expect(linkStat.isSymbolicLink()).toBe(true)
-    expect(await readlink(linkPath)).toBe(externalCss)
-    expect(await read('src/app/globals.css')).toContain(THEME_START)
-    expect(await readFile(externalCss, 'utf8')).toContain(THEME_START)
-  })
+      expect(code).toBe(0)
+      const linkStat = await lstat(linkPath)
+      expect(linkStat.isSymbolicLink()).toBe(true)
+      expect(await readlink(linkPath)).toBe(externalCss)
+      expect(await read('src/app/globals.css')).toContain(THEME_START)
+      expect(await readFile(externalCss, 'utf8')).toContain(THEME_START)
+    },
+  )
 
   test('is idempotent: running twice leaves one theme block', async () => {
     await nextProject()
