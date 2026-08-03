@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import {createRequire} from 'node:module'
-import {pathToFileURL} from 'node:url'
 import {parseArgs} from 'node:util'
 import {init} from './commands/init'
+import {isEntryPoint} from './is-entry-point'
 import {ask, confirmOverwrite} from './prompts/ask'
 
 // Resolved at runtime rather than imported, so `../package.json` points at this
@@ -20,7 +20,7 @@ export const help = `
     add     Add a component to your project
 
   Options
-    --yes           Accept every default without asking
+    -y, --yes       Accept every default without asking
     -v, --version   Print the version
     -h, --help      Show this message
 `
@@ -28,18 +28,30 @@ export const help = `
 type Log = (message: string) => void
 
 export const run = async (argv: readonly string[], log: Log): Promise<number> => {
-  const {values, positionals} = parseArgs({
-    args: [...argv],
-    options: {
-      yes: {type: 'boolean', default: false},
-      version: {type: 'boolean', short: 'v', default: false},
-      help: {type: 'boolean', short: 'h', default: false},
-    },
-    allowPositionals: true,
-    strict: false,
-  })
+  let values: {yes: boolean; version: boolean; help: boolean}
+  let positionals: string[]
 
-  if (values.version === true) {
+  try {
+    ;({values, positionals} = parseArgs({
+      args: [...argv],
+      options: {
+        yes: {type: 'boolean', short: 'y', default: false},
+        version: {type: 'boolean', short: 'v', default: false},
+        help: {type: 'boolean', short: 'h', default: false},
+      },
+      allowPositionals: true,
+      strict: true,
+    }))
+  } catch (error) {
+    // parseArgs throws a TypeError (code ERR_PARSE_ARGS_UNKNOWN_OPTION) for
+    // flags like `--yse` now that strict parsing is on; surface its message
+    // instead of letting the raw stack trace reach the user.
+    log(`${error instanceof Error ? error.message : String(error)}\n${help}`)
+
+    return 1
+  }
+
+  if (values.version) {
     log(version)
 
     return 0
@@ -47,7 +59,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
 
   const command = positionals[0]
 
-  if (command === undefined || values.help === true) {
+  if (command === undefined || values.help) {
     log(help)
 
     return 0
@@ -80,7 +92,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
         },
         log,
       },
-      {yes: values.yes === true},
+      {yes: values.yes},
     )
   }
 
@@ -92,10 +104,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
 // Only run when invoked as the binary. Comparing against argv[1] matters because
 // index.test.ts imports this module, and `process.argv[1] !== undefined` would be
 // true there too, making the test run the whole CLI on import.
-const entry = process.argv[1]
-const invokedDirectly = entry !== undefined && import.meta.url === pathToFileURL(entry).href
-
-if (invokedDirectly) {
+if (isEntryPoint(import.meta.url, process.argv[1])) {
   run(process.argv.slice(2), (message) => {
     console.log(message)
   })
