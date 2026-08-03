@@ -1179,7 +1179,8 @@ git commit -m "feat(cli): detect project layout, aliases, and stylesheet"
 
 - [ ] **Step 1: Add the dependency**
 
-In `pnpm-workspace.yaml`, add to the `catalog:` block in alphabetical order:
+In `pnpm-workspace.yaml`, add to the `catalog:` block in alphabetical order, which puts it
+after `@changesets/cli` since `ch` sorts before `cl`:
 
 ```yaml
 '@clack/prompts': ^1.7.0
