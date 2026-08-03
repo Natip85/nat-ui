@@ -182,14 +182,48 @@ describe('init', () => {
     expect(installs).toEqual([])
   })
 
+  test('declines to overwrite an existing config under --yes on a TTY, without prompting', async () => {
+    await nextProject()
+    await write('components.json', '{"existing": true}')
+    let asked = false
+
+    const code = await init(
+      io({
+        interactive: true,
+        confirmOverwrite: () => {
+          asked = true
+
+          return Promise.resolve(true)
+        },
+      }),
+      {yes: true},
+    )
+
+    expect(code).toBe(0)
+    expect(asked).toBe(false)
+    expect(await read('components.json')).toContain('existing')
+    expect(installs).toEqual([])
+  })
+
   test('overwrites an existing config when the user confirms', async () => {
     await nextProject()
     await write('components.json', '{"existing": true}')
 
     const code = await init(
-      io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}),
+      io({
+        interactive: true,
+        confirmOverwrite: () => Promise.resolve(true),
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src/app/globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
       {
-        yes: true,
+        yes: false,
       },
     )
 
@@ -212,7 +246,21 @@ describe('init', () => {
     await nextProject()
 
     await init(io(), {yes: true})
-    await init(io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}), {yes: true})
+    await init(
+      io({
+        interactive: true,
+        confirmOverwrite: () => Promise.resolve(true),
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src/app/globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
 
     const css = await read('src/app/globals.css')
     expect(css.split(THEME_START).length - 1).toBe(1)
@@ -281,9 +329,20 @@ describe('init', () => {
     installs = []
 
     const code = await init(
-      io({interactive: true, confirmOverwrite: () => Promise.resolve(true)}),
+      io({
+        interactive: true,
+        confirmOverwrite: () => Promise.resolve(true),
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src/app/globals.css',
+            aliasPrefix: '@',
+            rsc: true,
+            tsx: true,
+          }),
+      }),
       {
-        yes: true,
+        yes: false,
       },
     )
 

@@ -46,7 +46,9 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
   const configPath = join(io.cwd, CONFIG_FILE_NAME)
   if ((await readText(configPath)) !== undefined) {
-    const overwrite = io.interactive ? await io.confirmOverwrite() : false
+    // `--yes` means "accept every default without being asked" (per the README), so it
+    // must decline here rather than prompt, exactly like a non-TTY does.
+    const overwrite = io.interactive && !options.yes ? await io.confirmOverwrite() : false
     if (!overwrite) {
       io.log(`${CONFIG_FILE_NAME} already exists. Nothing was changed.`)
 
