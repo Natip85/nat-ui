@@ -87,4 +87,62 @@ describe('applyTheme', () => {
 
     expect(result.indexOf('tailwindcss')).toBeLessThan(result.indexOf(THEME_START))
   })
+
+  test('refuses a stylesheet carrying two complete theme blocks', () => {
+    const once = applyTheme(withImport, PRESETS.neutral)
+    const duplicated = once + '\n' + once.slice(once.indexOf(THEME_START))
+
+    expect(() => applyTheme(duplicated, PRESETS.slate)).toThrow(/nat-ui theme/)
+  })
+
+  test('names both markers in the two-block error too', () => {
+    const once = applyTheme(withImport, PRESETS.neutral)
+    const duplicated = once + '\n' + once.slice(once.indexOf(THEME_START))
+
+    expect(() => applyTheme(duplicated, PRESETS.slate)).toThrow(
+      new RegExp(`${escapeRegExp(THEME_START)}[\\s\\S]*${escapeRegExp(THEME_END)}`),
+    )
+  })
+
+  test('keeps CRLF endings throughout, including the injected block', () => {
+    const crlf = withImport.replace(/\n/g, '\r\n')
+    const result = applyTheme(crlf, PRESETS.neutral)
+
+    // Every line ending is \r\n -- no lone \n survives once all \r\n pairs are stripped.
+    expect(result.replace(/\r\n/g, '')).not.toContain('\n')
+    expect(result).toContain('\r\n' + THEME_START)
+  })
+
+  test('is idempotent for CRLF input, byte for byte', () => {
+    const crlf = withImport.replace(/\n/g, '\r\n')
+    const once = applyTheme(crlf, PRESETS.neutral)
+    const twice = applyTheme(once, PRESETS.neutral)
+
+    expect(twice).toBe(once)
+  })
+
+  test('keeps a leading BOM at byte zero when the block is prepended', () => {
+    const bom = '\uFEFF'
+    const result = applyTheme(`${bom}.app {\n  color: red;\n}\n`, PRESETS.neutral)
+
+    expect(result.charCodeAt(0)).toBe(0xfeff)
+    expect(result.indexOf(THEME_START)).toBe(1)
+  })
+
+  test('keeps a leading BOM at byte zero when inserted after the tailwindcss import', () => {
+    const bom = '\uFEFF'
+    const result = applyTheme(`${bom}${withImport}`, PRESETS.neutral)
+
+    expect(result.charCodeAt(0)).toBe(0xfeff)
+    expect(result.indexOf('tailwindcss')).toBeGreaterThan(0)
+    expect(result.indexOf('tailwindcss')).toBeLessThan(result.indexOf(THEME_START))
+  })
+
+  test('keeps a leading BOM at byte zero when an existing block is replaced', () => {
+    const bom = '\uFEFF'
+    const asNeutral = applyTheme(`${bom}${withImport}`, PRESETS.neutral)
+    const asSlate = applyTheme(asNeutral, PRESETS.slate)
+
+    expect(asSlate.charCodeAt(0)).toBe(0xfeff)
+  })
 })
