@@ -4,6 +4,7 @@ import {defaultAnswers} from './ask'
 
 const detected: DetectedProject = {
   hasPackageJson: true,
+  packageJsonParseError: false,
   hasTsconfig: true,
   css: 'src/app/globals.css',
   aliasPrefix: '@',

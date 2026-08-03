@@ -38,6 +38,11 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
 
     return 1
   }
+  if (detected.packageJsonParseError) {
+    io.log('package.json could not be parsed. Fix it and run init again.')
+
+    return 1
+  }
 
   const configPath = join(io.cwd, CONFIG_FILE_NAME)
   if ((await readText(configPath)) !== undefined) {

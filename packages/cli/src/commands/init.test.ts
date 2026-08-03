@@ -107,6 +107,20 @@ describe('init', () => {
     expect(installs).toEqual([])
   })
 
+  test('fails before writing when package.json exists but cannot be parsed', async () => {
+    await write('package.json', '{not json')
+    const stylesheet = "@import 'tailwindcss';\n"
+    await write('app/globals.css', stylesheet)
+
+    const code = await init(io(), {yes: true})
+
+    expect(code).toBe(1)
+    expect(logs.join('\n')).toMatch(/package\.json/)
+    await expectAbsent('components.json', 'lib/utils.ts', 'lib/utils.js')
+    expect(await read('app/globals.css')).toBe(stylesheet)
+    expect(installs).toEqual([])
+  })
+
   test('writes a js utility for a javascript project', async () => {
     await write('package.json', '{}')
     await write('app/globals.css', "@import 'tailwindcss';\n")

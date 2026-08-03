@@ -128,4 +128,28 @@ describe('detectProject', () => {
     expect(detected.hasTsconfig).toBe(true)
     expect(detected.aliasPrefix).toBe('@')
   })
+
+  test('flags a package.json that exists but cannot be parsed', async () => {
+    await write('package.json', '{not json')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasPackageJson).toBe(true)
+    expect(detected.packageJsonParseError).toBe(true)
+  })
+
+  test('does not flag a missing package.json as a parse error', async () => {
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.hasPackageJson).toBe(false)
+    expect(detected.packageJsonParseError).toBe(false)
+  })
+
+  test('does not flag a valid package.json as a parse error', async () => {
+    await write('package.json', '{}')
+
+    const detected = await detectProject(cwd, {})
+
+    expect(detected.packageJsonParseError).toBe(false)
+  })
 })

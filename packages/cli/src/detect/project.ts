@@ -6,6 +6,8 @@ import {detectPackageManager, type PackageManager} from './package-manager'
 
 export interface DetectedProject {
   hasPackageJson: boolean
+  /** True when `package.json` exists but could not be parsed as JSON. */
+  packageJsonParseError: boolean
   hasTsconfig: boolean
   css: string | undefined
   aliasPrefix: string
@@ -93,11 +95,11 @@ export const detectProject = async (
   cwd: string,
   env: NodeJS.ProcessEnv,
 ): Promise<DetectedProject> => {
-  const pkg = await readJson(join(cwd, 'package.json'))
-  const tsconfig = await readJsonc(join(cwd, 'tsconfig.json'))
-
   const hasPackageJson = await fileExists(join(cwd, 'package.json'))
+  const pkg = await readJson(join(cwd, 'package.json'))
+
   const hasTsconfig = await fileExists(join(cwd, 'tsconfig.json'))
+  const tsconfig = await readJsonc(join(cwd, 'tsconfig.json'))
 
   const hasAppDir =
     (await directoryExists(join(cwd, 'app'))) || (await directoryExists(join(cwd, 'src/app')))
@@ -106,6 +108,7 @@ export const detectProject = async (
 
   return {
     hasPackageJson,
+    packageJsonParseError: hasPackageJson && pkg === undefined,
     hasTsconfig,
     css: await findStylesheet(cwd),
     aliasPrefix: findAliasPrefix(tsconfig),
