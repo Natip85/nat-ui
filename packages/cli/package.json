@@ -36,7 +36,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify-pack": "tsx scripts/verify-pack.ts"
   },
   "devDependencies": {
     "@clack/prompts": "catalog:",
