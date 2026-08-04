@@ -1,7 +1,15 @@
 # Automated releases with npm trusted publishing
 
 Date: 2026-08-04
-Status: approved, not yet implemented
+Status: **abandoned.** Built and then removed the same day. The workflow failed
+on its first run because opening the version pull request needs a
+repository-level setting ("Allow GitHub Actions to create and approve pull
+requests") that is off by default and cannot be granted from within a workflow.
+Rather than widen that setting, releases went back to being published by hand;
+see `## Releasing` in the README. Kept for the findings recorded below, which
+outlast the decision — chiefly that `npm pack` leaves this repo's `catalog:`
+and `workspace:*` specifiers literal while `pnpm pack` resolves them, and that
+pnpm 10 cannot perform npm's OIDC token exchange at all.
 
 ## Goal
 

@@ -90,27 +90,22 @@ pnpm --filter @nat-ui/cli start --help
 
 ## Releasing
 
-Releases run in CI. The normal path never involves publishing from a laptop.
+Releases are published by hand, from a checkout of `main`:
 
 1. Describe user-visible changes in a changeset: `pnpm changeset`. Commit it
    with the work it describes.
-2. When that merges to `main`, the publish workflow opens a **Version Packages**
-   pull request that bumps the version and writes the changelog.
-3. Merging that pull request publishes `@nat-ui/cli` to npm, tags the commit,
-   and creates a GitHub release.
+2. When you are ready to ship, bump the version and write the changelog:
+   `pnpm version-packages`. Commit the result.
+3. Confirm the tarball npm will receive is correct:
+   `pnpm --filter @nat-ui/cli run verify-pack`.
+4. Publish: `pnpm release`. This builds and runs `changeset publish`, which
+   publishes to npm and creates the git tag.
+5. Push the commit and the tag: `git push && git push --tags`.
 
-Publishing authenticates with GitHub's OIDC identity through npm's trusted
-publishing, so no npm token is stored in this repository, and every published
-version carries a provenance attestation. The workflow filename
-(`.github/workflows/publish.yml`) is registered on the package's npm trust
-relationship and cannot be changed without updating that setting.
-
-`pnpm release` publishes locally and is refused by default, because it goes
-through `pnpm publish`, which cannot perform npm's OIDC exchange and so
-produces a version with no provenance. It remains available for the case where
-CI cannot publish at all — set `NAT_UI_ALLOW_LOCAL_RELEASE=1` — but a version
-shipped that way is a trust-level downgrade for anyone installing under
-`--trust-policy no-downgrade`.
+Publishing needs an npm login with publish rights (`npm whoami` to check).
+Because this happens locally rather than in a CI workflow, published versions
+carry no provenance attestation — npm generates those only for publishes
+authenticated by a CI provider's OIDC identity.
 
 ## License
 

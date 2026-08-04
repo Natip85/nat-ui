@@ -35,7 +35,6 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "is-published": "tsx scripts/is-published.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "verify-pack": "tsx scripts/verify-pack.ts"

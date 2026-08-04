@@ -1,5 +1,13 @@
 # Release automation with npm trusted publishing — Implementation Plan
 
+> **Status: abandoned.** This plan was implemented in full and then removed. The
+> workflow failed on its first run: opening the version pull request needs a
+> repository setting ("Allow GitHub Actions to create and approve pull
+> requests") that is off by default and cannot be granted from inside a
+> workflow. Releases are published by hand instead — see `## Releasing` in the
+> README. Only Task 1 survives, as `verify-pack` and `manifest.ts`, because
+> checking the tarball matters more for a hand-published release, not less.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Publish `@nat-ui/cli` from CI using GitHub's OIDC identity, so releasing is a merge rather than an interactive session at someone's terminal.
