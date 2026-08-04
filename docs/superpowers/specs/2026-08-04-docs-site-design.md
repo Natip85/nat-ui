@@ -162,14 +162,21 @@ Orama index, which needs no external service and no API key, and the toggle is
 
 ### Two sidebar roots
 
-`content/docs/` and `content/components/` each carry a `meta.json` with
-`"root": true`. Fumadocs renders a root folder as an independent sidebar under
-the shared shell, which is exactly the requested behaviour: Components shows
-the component list, Docs shows the guides, and the navigation bar and search
-are identical on both.
+Guides and components are two separate Fumadocs collections, each declared with
+its own `defineDocs` in `source.config.ts`, each wrapped in its own `loader()`
+with its own `baseUrl`, and each served by its own catch-all route. That gives
+`/docs/<slug>` and `/components/<slug>` as distinct URL trees, with a distinct
+sidebar per tree, under the navigation bar and search they share through
+`baseOptions`.
 
-Each `meta.json` uses the `"..."` rest entry after any explicit ordering, so a
-new MDX file appears in the sidebar without anyone editing the manifest.
+Two collections rather than one collection containing two folders marked
+`"root": true`. The `root` flag produces a sidebar _switcher_ inside a single
+`/docs` tree, which would put the components under `/docs/components` and
+reach them through a dropdown. Separate top-level paths were the requirement.
+
+Each collection's `meta.json` uses the `"..."` rest entry after any explicit
+ordering, so a new MDX file appears in the sidebar without anyone editing the
+manifest.
 
 ### How previews reach the real component
 
