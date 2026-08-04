@@ -6,3 +6,5 @@ coverage
 pnpm-lock.yaml
 apps/docs/public/r
 r/
+apps/docs/.source
+apps/docs/.next

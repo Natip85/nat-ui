@@ -11,6 +11,7 @@ export default tseslint.config(
       '**/.pnpm-store/**',
       '**/.next/**',
       'apps/docs/public/r/**',
+      '**/.source/**',
     ],
   },
   js.configs.recommended,
@@ -20,7 +21,9 @@ export default tseslint.config(
     languageOptions: {
       globals: globals.node,
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['apps/docs/*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
