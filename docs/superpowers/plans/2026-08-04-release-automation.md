@@ -373,21 +373,23 @@ Expected: exit 0, printing `Verified packed tarball shape and manifest for @nat-
 
 - [ ] **Step 7: Prove the new guard actually fires**
 
-The unit tests cover the detection logic; this confirms it is wired into the script. Temporarily make the manifest unresolvable by hand:
+The unit tests cover the detection logic; this confirms it is wired into the script.
+
+Editing `packages/cli/package.json` to inject an unresolved specifier does **not** work as a probe: pnpm resolves `catalog:` and `workspace:*` in every dependency field before writing the tarball, so the packed manifest comes out clean no matter what the source says. The regression this guard actually exists to catch is the pack tool reverting to npm, so probe that directly:
 
 ```bash
 cd /Users/natiperetz/react-apps/nat-ui
-cp packages/cli/package.json /tmp/cli-package.json.bak
-node -e "const fs=require('fs');const p='packages/cli/package.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.dependencies={'@nat-ui/schema':'workspace:*'};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')"
-pnpm --filter @nat-ui/cli run verify-pack; echo "exit: $?"
-cp /tmp/cli-package.json.bak packages/cli/package.json
+cp packages/cli/scripts/verify-pack.ts /tmp/vp.bak
+perl -pi -e "s/execFileAsync\('pnpm', \['pack'/execFileAsync('npm', ['pack'/" packages/cli/scripts/verify-pack.ts
+pnpm --filter @nat-ui/cli run verify-pack
+cp /tmp/vp.bak packages/cli/scripts/verify-pack.ts && rm /tmp/vp.bak
 ```
 
-Expected: exit 1, with an issue naming `@nat-ui/schema` in `dependencies` packed as `workspace:*`.
+Expected: exit status 1, listing all eight dev dependencies as packed with `catalog:` or `workspace:*`. The file list in the failure output should also show `dist/index.js (mode 755)`, which confirms the execute-bit check still works through the new extraction path.
 
-Then confirm the restore is clean: `git diff --exit-code -- packages/cli/package.json` exits 0.
+Then confirm the restore is clean (`git diff --exit-code` exits 0) and that `verify-pack` passes again with pnpm.
 
-Note: pnpm resolves `workspace:*` in `dependencies` too, so if this step _passes_ verification instead of failing, the guard is not wired up — investigate rather than moving on.
+If the npm-pack probe passes verification instead of failing, the manifest check is not wired into the script — investigate rather than moving on.
 
 - [ ] **Step 8: Run the full check suite**
 
