@@ -10,11 +10,10 @@ describe('help', () => {
     expect(help).toContain('--version')
   })
 
-  // Help must not promise commands that dispatch cannot serve, or the first
-  // thing a new user copies out of it fails. Implementing `add` should flip
-  // this assertion and the dispatch branch together.
-  test('does not advertise commands that are not implemented yet', () => {
-    expect(help).not.toContain('add')
+  test('advertises the add command', () => {
+    expect(help).toContain('add')
+    expect(help).toContain('--overwrite')
+    expect(help).toContain('--registry')
   })
 
   test('documents the -y shorthand alongside --yes', () => {
@@ -86,6 +85,18 @@ describe('run', () => {
     expect(await run(['init', 'typo'], (message) => lines.push(message))).toBe(1)
     expect(lines.join('\n')).toContain("'typo'")
     expect(lines.join('\n')).toContain('Usage')
+  })
+
+  test('passes the parsed flags through to add', async () => {
+    const lines: string[] = []
+
+    // A component name is required so dispatch validates it and reads config
+    // from cwd before any registry fetch; the repo root has no components.json.
+    expect(
+      await run(['add', 'button', '--registry', 'https://r.test'], (message) =>
+        lines.push(message),
+      ),
+    ).toBe(1)
   })
 
   test('dispatches a bare init with no stray positionals to the init command', async () => {
