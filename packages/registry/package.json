@@ -5,6 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "tsx scripts/build-registry.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
