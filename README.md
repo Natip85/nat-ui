@@ -7,13 +7,13 @@ configure.
 Built on [Base UI](https://base-ui.com) for behavior and Tailwind CSS for
 styling. TypeScript throughout.
 
-> Early development. Nothing is published yet.
+> Early development. `init` is the only command that exists so far; `add` and
+> the components it installs are being built next.
 
 ## Usage
 
 ```bash
 pnpm dlx @nat-ui/cli@latest init
-pnpm dlx @nat-ui/cli@latest add button
 ```
 
 `init` sets a project up in one pass. It asks where your stylesheet and import
@@ -31,8 +31,8 @@ Re-running `init` is safe. It updates the theme block in your stylesheet in
 place instead of duplicating it, and if `components.json` already exists it
 asks before overwriting — declining, and changing nothing, when it can't ask.
 
-Every later `add` reads that config and rewrites imports to match your
-project's aliases, so the files land where you already keep things.
+That config is what `add` will read once it exists, so the components it copies
+land where you already keep things, with imports rewritten to your aliases.
 
 ## Repository layout
 

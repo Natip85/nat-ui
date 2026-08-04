@@ -5,10 +5,16 @@ import {describe, expect, test} from 'vitest'
 import {help, run} from './index'
 
 describe('help', () => {
-  test('documents both commands and the version flag', () => {
+  test('documents the init command and the version flag', () => {
     expect(help).toContain('init')
-    expect(help).toContain('add')
     expect(help).toContain('--version')
+  })
+
+  // Help must not promise commands that dispatch cannot serve, or the first
+  // thing a new user copies out of it fails. Implementing `add` should flip
+  // this assertion and the dispatch branch together.
+  test('does not advertise commands that are not implemented yet', () => {
+    expect(help).not.toContain('add')
   })
 
   test('documents the -y shorthand alongside --yes', () => {

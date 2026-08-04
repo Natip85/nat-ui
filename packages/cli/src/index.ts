@@ -17,7 +17,6 @@ export const help = `
 
   Commands
     init    Configure a project to use nat-ui
-    add     Add a component to your project
 
   Options
     -y, --yes       Accept every default without asking
