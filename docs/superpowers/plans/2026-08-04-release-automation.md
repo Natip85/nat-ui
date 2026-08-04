@@ -22,6 +22,7 @@ Design spec: `docs/superpowers/specs/2026-08-04-release-automation-design.md`.
 - No repository secrets. The default `GITHUB_TOKEN` covers the version PR, the tag, and the release; `id-token: write` covers npm.
 - `@nat-ui/cli` is the only publishable package. `@nat-ui/registry` and `@nat-ui/schema` are `private: true`.
 - Concurrency is serialized without `cancel-in-progress`.
+- Tagging must not be gated on the same condition as publishing. The gate answers "is this version on npm", so once a publish succeeds that answer is `true` forever — a run that published but failed to push the tag could then never tag, not even on a re-run. The tag step is gated on the gate having run, and each half checks whether its own artifact already exists.
 - Code style (Prettier): no semicolons, single quotes, no bracket spacing, trailing commas, arrow parens always, print width 100, 2-space indent.
 - Local imports are extensionless (`from './manifest'`). `moduleResolution` is `bundler` and `verbatimModuleSyntax` is on, so type-only imports must use `import type`.
 - Tests are colocated `*.test.ts` files run by Vitest from the repo root. `packages/cli/tsconfig.json` already includes `scripts/**/*.ts`, so new scripts are typechecked and typed-linted.
@@ -754,22 +755,44 @@ jobs:
       - name: Publish to npm
         if: steps.gate.outputs.published == 'false'
         run: |
-          tarball="$(find "$RUNNER_TEMP/release" -maxdepth 1 -name '*.tgz')"
-          test -n "$tarball"
-          npm publish "$tarball" --provenance
+          shopt -s nullglob
+          tarballs=("$RUNNER_TEMP/release"/*.tgz)
+          test "${#tarballs[@]}" -eq 1
+          npm publish "${tarballs[0]}" --provenance
 
       # The action creates tags only when it publishes, and it is not publishing
       # here, so the tag and release are made explicitly. The tag format matches
       # what changesets produced for 0.1.0.
+      #
+      # Deliberately gated on the gate having *run*, not on `published == false`,
+      # and each half asks whether its own work is already done. A publish that
+      # succeeded while this step failed would otherwise be untaggable forever:
+      # the gate reports the version as published from then on, so re-running —
+      # the obvious response to the red run — would skip straight past here and
+      # leave the tag to be made by hand.
+      #
+      # On such a re-run the tag lands on the current head. That is the same
+      # commit when the job is re-run promptly, and a later one if pushes
+      # intervened, which is a worse tag than the run that failed would have
+      # made but a better outcome than no tag at all.
       - name: Tag and release
-        if: steps.gate.outputs.published == 'false'
+        if: steps.gate.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: '@nat-ui/cli@${{ steps.gate.outputs.version }}'
         run: |
-          git tag "$TAG"
-          git push origin "$TAG"
-          gh release create "$TAG" --title "$TAG" --generate-notes
+          test -n "${TAG#@nat-ui/cli@}"
+          if git ls-remote --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists."
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          fi
 ```
 
 - [ ] **Step 2: Validate the YAML parses**
