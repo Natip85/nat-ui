@@ -1,11 +1,33 @@
-import {REGISTRY_SCHEMA_VERSION} from '@nat-ui/schema'
+import {REGISTRY_SCHEMA_VERSION, type RegistryItem} from '@nat-ui/schema'
 
 /**
  * Component sources live under `src/` and are authored against the `@/*` alias.
  * The CLI rewrites that alias to whatever the consuming project configured, so
  * these files are never imported directly from here.
+ *
+ * `path` is relative to `src/`. Only its basename decides the filename in a
+ * consuming project; the directory part is this repository's structure.
  */
-export const registry = {
-  schemaVersion: REGISTRY_SCHEMA_VERSION,
-  items: [],
-} as const
+export const items: readonly RegistryItem[] = [
+  {
+    name: 'button',
+    type: 'ui',
+    dependencies: ['@base-ui/react', 'class-variance-authority'],
+    files: [{path: 'components/ui/button.tsx', type: 'ui'}],
+  },
+  {
+    name: 'dialog',
+    type: 'ui',
+    dependencies: ['@base-ui/react', 'lucide-react'],
+    registryDependencies: ['button'],
+    files: [{path: 'components/ui/dialog.tsx', type: 'ui'}],
+  },
+  {
+    name: 'input',
+    type: 'ui',
+    dependencies: ['@base-ui/react'],
+    files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+  },
+]
+
+export const registry = {schemaVersion: REGISTRY_SCHEMA_VERSION, items} as const

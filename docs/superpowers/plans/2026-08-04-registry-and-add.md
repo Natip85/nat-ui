@@ -974,6 +974,8 @@ It enforces two invariants the CLI depends on. Only `ui` items and files may be 
 - Modify: `packages/registry/src/index.ts`
 - Create: `packages/registry/scripts/build-registry.ts`
 - Create: `packages/registry/scripts/build-registry.test.ts`
+- Modify: `packages/registry/tsconfig.json`
+- Modify: `.prettierignore`
 
 **Interfaces:**
 
@@ -1294,6 +1296,20 @@ The entry-point guard mirrors `packages/cli/src/is-entry-point.ts`. If it proves
 Run: `pnpm vitest run packages/registry/scripts/build-registry.test.ts`
 Expected: PASS, 10 tests.
 
+- [ ] **Step 5b: Bring the new files under the existing tooling**
+
+`packages/registry/tsconfig.json` includes only `src/**`, so typed ESLint rejects anything under `scripts/` as outside the project. Add `scripts/**/*.ts` to its `include` array, matching `packages/cli/tsconfig.json`, which already lists exactly that for its own scripts:
+
+```json
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"]
+```
+
+The generated documents are owned by the generator, so a formatter must not also claim them. Append to `.prettierignore`:
+
+```
+r/
+```
+
 - [ ] **Step 6: Generate the registry for the first time**
 
 Run: `pnpm --filter @nat-ui/registry exec tsx scripts/build-registry.ts`
@@ -1374,13 +1390,9 @@ In `.github/workflows/ci.yml`, in the `verify` job, insert a step immediately af
 - run: git diff --exit-code -- r
 ```
 
-- [ ] **Step 5: Keep Prettier off the generated output**
+- [ ] **Step 5: Confirm Prettier stays off the generated output**
 
-The generator writes two-space JSON with a trailing newline, which matches Prettier's own JSON style, but the embedded `content` strings are long single lines and there is no reason to let a formatter and a generator both claim ownership of these files. Append to `.prettierignore`:
-
-```
-r/
-```
+`r/` was added to `.prettierignore` in Task 6, because that is the task that first created the files and every task has to leave the pipeline green. Confirm the entry is present rather than adding it twice.
 
 Run: `pnpm format:check`
 Expected: PASS.
