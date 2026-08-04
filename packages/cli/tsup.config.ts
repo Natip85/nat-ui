@@ -11,8 +11,11 @@ export default defineConfig({
   // Bundling is why nothing below appears in `dependencies`. It also means a
   // change to @nat-ui/schema changes what this package ships, so schema
   // releases need an accompanying changeset here.
-  noExternal: [/^@nat-ui\//, 'zod'],
+  noExternal: [/^@nat-ui\//, 'zod', '@clack/prompts', 'jsonc-parser'],
   dts: false,
   clean: true,
   minify: true,
+  // Read after the build to work out whose licenses have to ship.
+  metafile: true,
+  onSuccess: 'tsx scripts/write-notices.ts',
 })

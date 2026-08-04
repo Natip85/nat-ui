@@ -23,6 +23,7 @@
   ],
   "files": [
     "dist",
+    "!dist/metafile-*.json",
     "THIRD_PARTY_NOTICES"
   ],
   "bin": {
@@ -35,11 +36,14 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "tsx src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify-pack": "tsx scripts/verify-pack.ts"
   },
   "devDependencies": {
+    "@clack/prompts": "catalog:",
     "@nat-ui/schema": "workspace:*",
     "@types/node": "catalog:",
+    "jsonc-parser": "catalog:",
     "tsup": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",

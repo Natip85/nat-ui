@@ -9,7 +9,7 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "build": "pnpm --recursive --filter './packages/**' build",
+    "build": "pnpm --recursive build",
     "typecheck": "pnpm --recursive typecheck",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",

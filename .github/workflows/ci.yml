@@ -14,14 +14,31 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        # Oldest supported version per `engines`, plus the active LTS. The floor
-        # is a 22.x patch rather than 22.0 because ESLint 10 requires ^22.13.
-        node: ['22.13', '24']
+        # Node-version coverage and OS coverage are deliberately not fully
+        # crossed (which would be 2 x 2 = 4 jobs). The CLI's platform-specific
+        # code (the installer's `shell: win32` branch, path separators, the
+        # entry-point guard's realpath/symlink comparison) is sensitive to the
+        # OS, not the Node minor version, so running Windows against both
+        # Node versions would mostly duplicate signal for an extra job. The
+        # floor and the active LTS are both covered on Linux, where runners
+        # are cheapest; Windows is pinned to just the active LTS, since real
+        # `npx`/`pnpm dlx` users are overwhelmingly on a current Node, not the
+        # `engines` floor.
+        include:
+          # Oldest supported version per `engines`, plus the active LTS. The
+          # floor is a 22.x patch rather than 22.0 because ESLint 10 requires
+          # ^22.13.
+          - os: ubuntu-latest
+            node: '22.13'
+          - os: ubuntu-latest
+            node: '24'
+          - os: windows-latest
+            node: '24'
 
     steps:
       - uses: actions/checkout@v7
@@ -49,3 +66,32 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+
+  pack-integrity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # THIRD_PARTY_NOTICES and dist/ only exist after a build; the packed
+      # tarball inspected below has to reflect what a real build produces.
+      - run: pnpm build
+
+      # Inspects the actual `npm pack` output (what `npm publish` would ship):
+      # the executable is present and keeps its shebang, THIRD_PARTY_NOTICES
+      # is included, dist/metafile-*.json is excluded, and nothing stray rode
+      # along. See packages/cli/scripts/verify-pack.ts for the checks.
+      # `--fail-if-no-match` because a filter that matches nothing exits 0,
+      # which would quietly turn this guard into a no-op that still reports green.
+      - run: pnpm --filter @nat-ui/cli --fail-if-no-match run verify-pack
