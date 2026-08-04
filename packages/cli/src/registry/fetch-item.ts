@@ -75,15 +75,13 @@ export const fetchItem = async (
     throw new Error(`The registry returned ${String(status)} for ${url}.`)
   }
 
-  const parsed = parseRegistryDocument(
+  return parseRegistryDocument(
     parseJson(body, url),
     registryItemPayloadSchema,
     (seenVersion) =>
       `The registry document for "${name}" was built for a different version of the registry format (version ${seenVersion}; this CLI expects ${REGISTRY_SCHEMA_VERSION}). Upgrade the CLI.`,
     `The registry document for "${name}" is malformed — the registry served something this CLI cannot use.`,
   )
-
-  return parsed
 }
 
 export const fetchIndex = async (baseUrl: string, fetchJson: FetchJson): Promise<RegistryIndex> => {
@@ -94,13 +92,11 @@ export const fetchIndex = async (baseUrl: string, fetchJson: FetchJson): Promise
     throw new Error(`The registry returned ${String(status)} for ${url}.`)
   }
 
-  const parsed = parseRegistryDocument(
+  return parseRegistryDocument(
     parseJson(body, url),
     registryIndexSchema,
     (seenVersion) =>
       `The registry index was built for a different version of the registry format (version ${seenVersion}; this CLI expects ${REGISTRY_SCHEMA_VERSION}). Upgrade the CLI.`,
-    `The registry index is malformed — the registry served something this CLI cannot use.`,
+    'The registry index is malformed — the registry served something this CLI cannot use.',
   )
-
-  return parsed
 }
