@@ -87,7 +87,7 @@ export const toPayload = (
 }
 
 // Sorted by code unit rather than locale, so the order cannot vary by machine.
-const byName = (a: {name: string}, b: {name: string}): number =>
+export const byName = (a: {name: string}, b: {name: string}): number =>
   a.name < b.name ? -1 : a.name > b.name ? 1 : 0
 
 export const toIndex = (all: readonly RegistryItem[]): RegistryIndex =>

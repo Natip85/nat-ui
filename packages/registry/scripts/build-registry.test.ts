@@ -1,6 +1,7 @@
 import type {RegistryItem} from '@nat-ui/schema'
 import {describe, expect, test} from 'vitest'
 import {
+  byName,
   importSpecifiers,
   normalizeNewlines,
   serialize,
@@ -108,7 +109,7 @@ describe('toPayload', () => {
 })
 
 describe('toIndex', () => {
-  test('lists every item sorted by name', () => {
+  test('sorts every item by name', () => {
     const index = toIndex([
       {...button, name: 'input'},
       {...button, name: 'aa'},
@@ -117,6 +118,17 @@ describe('toIndex', () => {
 
     expect(index.items.map((entry) => entry.name)).toEqual(['a-b', 'aa', 'input'])
     expect(index.schemaVersion).toBe('1')
+  })
+})
+
+describe('byName', () => {
+  test('orders by code unit, not by locale', () => {
+    // Not reachable through toIndex, whose names are schema-validated to
+    // lowercase. Asserted directly because across [a-z0-9-] the two orderings
+    // agree, so no valid item name could distinguish them -- and the whole
+    // point is that the comparator must not vary with the runtime's locale.
+    expect(byName({name: 'B'}, {name: 'a'})).toBeLessThan(0)
+    expect('B'.localeCompare('a')).toBeGreaterThan(0)
   })
 })
 
