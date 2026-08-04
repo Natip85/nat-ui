@@ -434,14 +434,16 @@ Add to the `catalog:` block of `pnpm-workspace.yaml`, keeping it alphabetically 
 '@testing-library/react': ^16.3.2
 '@types/react': ^19.2.18
 '@types/react-dom': ^19.2.4
-'class-variance-authority': ^0.7.1
+class-variance-authority: ^0.7.1
 clsx: ^2.1.1
 happy-dom: ^20.11.1
-'lucide-react': ^1.28.0
+lucide-react: ^1.28.0
 react: ^19.2.8
-'react-dom': ^19.2.8
-'tailwind-merge': ^3.6.0
+react-dom: ^19.2.8
+tailwind-merge: ^3.6.0
 ```
+
+Only `@`-prefixed keys are quoted, matching the convention already in the file. Verify the exact latest patch versions with `npm view <name> version` before writing them; the floors above were current when the plan was written.
 
 Replace the `devDependencies` block of `packages/registry/package.json` with:
 
