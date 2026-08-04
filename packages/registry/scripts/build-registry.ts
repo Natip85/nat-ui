@@ -33,15 +33,18 @@ export const importSpecifiers = (source: string): string[] => {
 const SUPPORTED_ALIAS = /^@\/(?:lib\/utils|components\/ui\/[a-z0-9-]+)$/
 const DYNAMIC_SPECIFIER = /\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g
 
-const dynamicAliasImports = (source: string): string[] => {
+const dynamicImportSpecifiers = (source: string): string[] => {
   const found: string[] = []
   for (const match of source.matchAll(DYNAMIC_SPECIFIER)) {
     const value = match[1]
-    if (value?.startsWith('@/')) found.push(value)
+    if (value !== undefined) found.push(value)
   }
 
   return found
 }
+
+const dynamicAliasImports = (source: string): string[] =>
+  dynamicImportSpecifiers(source).filter((specifier) => specifier.startsWith('@/'))
 
 export const unsupportedAliasImports = (source: string): string[] => [
   ...importSpecifiers(source).filter(
@@ -82,7 +85,7 @@ export const undeclaredDependencies = (source: string, declared: readonly string
   const known = new Set(declared)
   const missing = new Set<string>()
 
-  for (const specifier of importSpecifiers(source)) {
+  for (const specifier of [...importSpecifiers(source), ...dynamicImportSpecifiers(source)]) {
     const name = packageNameOf(specifier)
 
     if (name !== undefined && !known.has(name) && !ASSUMED_PRESENT.has(name)) {

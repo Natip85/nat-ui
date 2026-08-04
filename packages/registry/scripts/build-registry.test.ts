@@ -200,6 +200,30 @@ describe('undeclaredDependencies', () => {
 
     expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
   })
+
+  it('reports a dynamically imported package that is not declared', () => {
+    const source = "const {clsx} = await import('clsx')\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+
+  it('accepts a dynamically imported package that is declared', () => {
+    const source = "const {Button} = await import('@base-ui/react/button')\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('resolves a dynamic import subpath to the package name', () => {
+    const source = "import('@base-ui/react/button')\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('ignores a dynamic alias import', () => {
+    const source = "import('@/lib/utils')\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
 })
 
 describe('toPayload dependency validation', () => {
@@ -225,5 +249,17 @@ describe('toPayload dependency validation', () => {
     const read = () => "import {Input} from '@base-ui/react/input'\n"
 
     expect(toPayload(item, read).files[0]?.content).toContain('@base-ui/react/input')
+  })
+
+  it('refuses a file dynamically importing a package the item does not declare', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "const {clsx} = await import('clsx')\n"
+
+    expect(() => toPayload(item, read)).toThrow(/clsx/)
   })
 })
