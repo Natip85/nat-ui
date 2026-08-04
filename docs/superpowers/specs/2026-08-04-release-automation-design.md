@@ -22,7 +22,7 @@ create a package that does not yet exist. Now that the package exists, it is.
 
 In scope:
 
-- A `release.yml` workflow that opens a version PR and publishes on merge.
+- A `publish.yml` workflow that opens a version PR and publishes on merge.
 - Trusted publishing (OIDC), so no npm token is stored in the repository.
 - Provenance attestations on every published version.
 - Hardening `verify-pack` against the manifest defect described below.
@@ -110,7 +110,12 @@ separate triggers, so there is one workflow and one mental model.
 
 ## The workflow
 
-`.github/workflows/release.yml`, one job, `ubuntu-latest`, on pushes to `main`.
+`.github/workflows/publish.yml`, one job, `ubuntu-latest`, on pushes to `main`.
+
+The filename is load-bearing. npm matches the OIDC token's `workflow_ref` claim
+against the filename registered on the trust relationship, so the file must be
+`publish.yml` exactly — not `release.yml`, and it cannot be renamed later without
+updating the npm setting in the same change.
 
 Permissions are the union of what the two phases need: `id-token: write` for the
 OIDC exchange, `contents: write` for tags, and `pull-requests: write` for the
@@ -208,12 +213,18 @@ Both must exist before the first automated publish.
 
 1. **The trust relationship on npm.** `@nat-ui/cli` → Settings → Trusted
    Publishing → GitHub Actions, repository `Natip85/nat-ui`, workflow
-   `release.yml`. npm supports trusted publishing only from GitHub-hosted
-   runners, which is what this workflow uses.
+   `publish.yml`. This is already configured. npm supports trusted publishing
+   only from GitHub-hosted runners, which is what this workflow uses.
 2. **A PAT for the version PR.** PRs opened with the default `GITHUB_TOKEN` do
    not trigger other workflows, so the Version Packages PR would arrive without
    CI checks. A fine-grained token with contents and pull-request write access,
-   stored as a repository secret and passed to the action, restores them.
+   stored as the repository secret `RELEASE_PR_TOKEN` and passed to the action,
+   restores them.
+
+npm's form states the workflow must already exist in `.github/workflows/`. It
+does not yet, so if npm rejects or later invalidates the trust relationship, the
+fix is to re-save it once `publish.yml` is merged to `main` — not to change any
+of the design above.
 
 Once trusted publishing works, the npm token used for `0.1.0` should be revoked.
 It is a standing credential with nothing left to do.
