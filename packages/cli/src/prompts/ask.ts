@@ -81,3 +81,16 @@ export const confirmOverwrite = async (): Promise<boolean> => {
 
   return !isCancel(answer) && answer
 }
+
+/**
+ * One prompt for the whole set rather than one per file: the answer is the same
+ * decision either way, and asking repeatedly turns a choice into a chore.
+ */
+export const confirmOverwriteFiles = async (paths: readonly string[]): Promise<boolean> => {
+  const answer = await confirm({
+    message: `These files already exist: ${paths.join(', ')}. Overwrite them?`,
+    initialValue: false,
+  })
+
+  return !isCancel(answer) && answer
+}
