@@ -823,21 +823,56 @@ EOF
 
 ---
 
-### Task 4: Close the local publish path and document releasing
+### Task 4: Guard the local publish path and document releasing
 
-`pnpm release` currently runs `pnpm build && changeset publish`. Left in place it is a loaded gun: it publishes through `pnpm publish` with whatever credential happens to be on the machine, producing a version with no provenance. Because pnpm can enforce that a package's trust level never regresses, that would be a visible downgrade for anyone who opted into `--trust-policy no-downgrade`.
+`pnpm release` currently runs `pnpm build && changeset publish`. Left as-is it is too easy to reach by accident: it publishes through `pnpm publish` with whatever credential happens to be on the machine, producing a version with no provenance. Because pnpm can enforce that a package's trust level never regresses, that is a visible downgrade for anyone who opted into `--trust-policy no-downgrade`.
+
+The fix is a guard, not a wall. Removing the local path entirely would mean that a broken workflow, a GitHub outage, or a revoked trust relationship leaves no way to ship at all, and the moment that happens is exactly the moment nobody wants to be reverse-engineering a publish command under pressure. So the local path stays, behind an environment variable that has to be set deliberately, and it says plainly what is being given up.
 
 **Files:**
 
-- Modify: `package.json` (replace the `release` script)
-- Modify: `README.md` (add a `## Releasing` section between `## Development` and `## License`)
+- Create: `scripts/guard-release.mjs`
+- Modify: `package.json` (route `release` through the guard)
+- Modify: `README.md` (add a `## Releasing` section immediately before `## License`)
 
 **Interfaces:**
 
 - Consumes: the workflow from Task 3, by name only.
-- Produces: nothing.
+- Produces: nothing consumed by later tasks.
 
-- [ ] **Step 1: Replace the `release` script**
+Plain `.mjs` run directly by node, not TypeScript: the root has no `tsx` (it lives in `packages/cli`), and a guard that must run before a release is the wrong place to add a dependency.
+
+- [ ] **Step 1: Write the guard**
+
+Create `scripts/guard-release.mjs`:
+
+```js
+// Publishing locally goes through `pnpm publish`, which cannot perform npm's
+// OIDC exchange, so the result carries no provenance attestation. That is a
+// trust-level downgrade for anyone installing under `--trust-policy
+// no-downgrade`, which is why this is opt-in rather than merely discouraged.
+// It stays reachable because a broken workflow or a revoked trust
+// relationship must not leave the package unshippable.
+const OPT_IN = 'NAT_UI_ALLOW_LOCAL_RELEASE'
+
+if (process.env[OPT_IN] !== '1') {
+  console.error(
+    [
+      'Releases run in CI, through .github/workflows/publish.yml: merge the',
+      'Version Packages pull request and the workflow publishes with npm',
+      'trusted publishing.',
+      '',
+      'Publishing from here instead would ship a version with no provenance',
+      `attestation. If that is genuinely what you want, set ${OPT_IN}=1.`,
+    ].join('\n'),
+  )
+  process.exit(1)
+}
+
+console.warn(`${OPT_IN}=1 is set: publishing locally, without a provenance attestation.`)
+```
+
+- [ ] **Step 2: Route `release` through the guard**
 
 In `package.json`, replace this line:
 
@@ -848,25 +883,49 @@ In `package.json`, replace this line:
 with:
 
 ```json
-    "release": "node -e \"console.error('Releases run in CI via .github/workflows/publish.yml. Publishing from a laptop bypasses npm trusted publishing and would ship a version with no provenance.'); process.exit(1)\""
+    "release": "node scripts/guard-release.mjs && pnpm build && changeset publish"
 ```
 
 Keep `"version-packages": "changeset version"` as it is — the workflow calls it.
 
-- [ ] **Step 2: Verify the guard fires**
+- [ ] **Step 3: Verify both paths**
 
-Run: `cd /Users/natiperetz/react-apps/nat-ui && pnpm release; echo "exit: $?"`
+The blocked path, which is safe to run in full:
 
-Expected: the message above on stderr, and `exit: 1`.
+```bash
+cd /Users/natiperetz/react-apps/nat-ui
+pnpm release; echo "exit: $?"
+```
 
-- [ ] **Step 3: Document the release process**
+Expected: the explanation on stderr, `exit: 1`, and no build and no publish attempt.
+
+The opt-in path must be checked on the guard alone. Do **not** run `pnpm release` with the variable set — that would really publish:
+
+```bash
+cd /Users/natiperetz/react-apps/nat-ui
+NAT_UI_ALLOW_LOCAL_RELEASE=1 node scripts/guard-release.mjs; echo "exit: $?"
+```
+
+Expected: the warning on stderr and `exit: 0`.
+
+Also confirm a near-miss does not open the gate:
+
+```bash
+cd /Users/natiperetz/react-apps/nat-ui
+NAT_UI_ALLOW_LOCAL_RELEASE=true node scripts/guard-release.mjs; echo "exit: $?"
+NAT_UI_ALLOW_LOCAL_RELEASE= node scripts/guard-release.mjs; echo "exit: $?"
+```
+
+Expected: `exit: 1` for both.
+
+- [ ] **Step 4: Document the release process**
 
 In `README.md`, insert a new section immediately before `## License`:
 
 ```markdown
 ## Releasing
 
-Releases are automated and run in CI; there is no local publish path.
+Releases run in CI. The normal path never involves publishing from a laptop.
 
 1. Describe user-visible changes in a changeset: `pnpm changeset`. Commit it
    with the work it describes.
@@ -880,6 +939,13 @@ publishing, so no npm token is stored in this repository, and every published
 version carries a provenance attestation. The workflow filename
 (`.github/workflows/publish.yml`) is registered on the package's npm trust
 relationship and cannot be changed without updating that setting.
+
+`pnpm release` publishes locally and is refused by default, because it goes
+through `pnpm publish`, which cannot perform npm's OIDC exchange and so
+produces a version with no provenance. It remains available for the case where
+CI cannot publish at all — set `NAT_UI_ALLOW_LOCAL_RELEASE=1` — but a version
+shipped that way is a trust-level downgrade for anyone installing under
+`--trust-policy no-downgrade`.
 ```
 
 - [ ] **Step 4: Run format, lint, and the full suite**
@@ -891,13 +957,15 @@ Expected: all green.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add package.json README.md
+git add scripts/guard-release.mjs package.json README.md
 git commit -m "$(cat <<'EOF'
-chore: close the local publish path and document releasing
+chore: make a local release opt-in rather than the default
 
 `pnpm release` published through pnpm with whatever credential was on the
 machine, producing a version with no provenance — a trust-level downgrade for
-anyone enforcing no-downgrade. Replace it with a guard pointing at CI.
+anyone enforcing no-downgrade. Put it behind an explicit opt-in instead of
+removing it, so a broken workflow or a revoked trust relationship still
+leaves a way to ship.
 EOF
 )"
 ```
