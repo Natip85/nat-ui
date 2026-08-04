@@ -1,5 +1,10 @@
 import {describe, expect, test} from 'vitest'
-import {registryItemSchema} from './registry-item'
+import {
+  registryIndexSchema,
+  registryItemNameSchema,
+  registryItemPayloadSchema,
+  registryItemSchema,
+} from './registry-item'
 
 const button = {
   name: 'button',
@@ -66,5 +71,69 @@ describe('registryItemSchema file path safety', () => {
 
   test('rejects a windows style absolute path', () => {
     expect(registryItemSchema.safeParse(withPath('C:\\Windows\\System32')).success).toBe(false)
+  })
+})
+
+describe('registryItemNameSchema', () => {
+  test('accepts lowercase hyphenated names', () => {
+    expect(registryItemNameSchema.safeParse('button').success).toBe(true)
+    expect(registryItemNameSchema.safeParse('alert-dialog').success).toBe(true)
+    expect(registryItemNameSchema.safeParse('h1').success).toBe(true)
+  })
+
+  test('rejects anything that could escape a URL or a path', () => {
+    for (const name of ['', '..', '../etc', 'a/b', 'Button', 'a--b', '-a', 'a-', 'a b']) {
+      expect(registryItemNameSchema.safeParse(name).success).toBe(false)
+    }
+  })
+})
+
+describe('registryItemPayloadSchema', () => {
+  const payload = {
+    schemaVersion: '1',
+    name: 'button',
+    type: 'ui',
+    dependencies: ['@base-ui/react'],
+    files: [{path: 'ui/button.tsx', type: 'ui', content: 'export const Button = () => null\n'}],
+  }
+
+  test('accepts a well-formed payload', () => {
+    expect(registryItemPayloadSchema.safeParse(payload).success).toBe(true)
+  })
+
+  test('rejects a schema version it does not understand', () => {
+    expect(registryItemPayloadSchema.safeParse({...payload, schemaVersion: '2'}).success).toBe(
+      false,
+    )
+  })
+
+  test('requires content on every file', () => {
+    const withoutContent = {...payload, files: [{path: 'ui/button.tsx', type: 'ui'}]}
+
+    expect(registryItemPayloadSchema.safeParse(withoutContent).success).toBe(false)
+  })
+
+  test('still rejects unsafe paths and unknown keys', () => {
+    const escaping = {...payload, files: [{path: '../x.tsx', type: 'ui', content: ''}]}
+    const absolute = {...payload, files: [{path: '/x.tsx', type: 'ui', content: ''}]}
+
+    expect(registryItemPayloadSchema.safeParse(escaping).success).toBe(false)
+    expect(registryItemPayloadSchema.safeParse(absolute).success).toBe(false)
+    expect(registryItemPayloadSchema.safeParse({...payload, extra: 1}).success).toBe(false)
+  })
+
+  test('rejects a name the pattern forbids', () => {
+    expect(registryItemPayloadSchema.safeParse({...payload, name: '../evil'}).success).toBe(false)
+  })
+})
+
+describe('registryIndexSchema', () => {
+  test('accepts an index and rejects a bad entry', () => {
+    const index = {schemaVersion: '1', items: [{name: 'button', type: 'ui'}]}
+
+    expect(registryIndexSchema.safeParse(index).success).toBe(true)
+    expect(
+      registryIndexSchema.safeParse({schemaVersion: '1', items: [{name: 'button'}]}).success,
+    ).toBe(false)
   })
 })
