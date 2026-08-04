@@ -17,7 +17,14 @@ export const versionsOf = (document: unknown): Record<string, unknown> | undefin
 
   const {versions} = document
 
-  return isRecord(versions) ? versions : undefined
+  // `isRecord` accepts arrays too (`typeof [] === 'object'`), but a versions
+  // map is keyed by version string, not by array index — `[]` is no more a
+  // versions map than `null` or a string is. Checked here, not inside
+  // `isRecord`: that helper is shared verbatim with `manifest.ts`, where
+  // "is this an object" is genuinely all that's being asked.
+  if (!isRecord(versions) || Array.isArray(versions)) return undefined
+
+  return versions
 }
 
 /**

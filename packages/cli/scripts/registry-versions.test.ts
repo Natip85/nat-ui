@@ -25,9 +25,19 @@ describe('versionsOf', () => {
     expect(versionsOf({versions: 'nope'})).toBeUndefined()
   })
 
+  it('is undefined when "versions" is an array', () => {
+    // Arrays pass a naive `typeof x === 'object'` check, but a versions map
+    // is keyed by version string, not by index — `[]` is not a usable map.
+    expect(versionsOf({versions: []})).toBeUndefined()
+  })
+
   it('is undefined for a document that is not an object', () => {
     expect(versionsOf('not a document')).toBeUndefined()
     expect(versionsOf(null)).toBeUndefined()
+  })
+
+  it('is undefined for a top-level array document', () => {
+    expect(versionsOf([])).toBeUndefined()
   })
 })
 
