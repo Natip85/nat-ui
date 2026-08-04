@@ -20,7 +20,12 @@ export default tseslint.config(
     languageOptions: {
       globals: globals.node,
       parserOptions: {
-        projectService: true,
+        projectService: {
+          // `guard-release.mjs` is deliberately plain JS run by node directly
+          // (see its own comment for why), so it isn't part of any
+          // tsconfig's `include`. Without this it fails to parse at all.
+          allowDefaultProject: ['scripts/*.mjs'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

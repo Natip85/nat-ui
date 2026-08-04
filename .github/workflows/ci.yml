@@ -94,10 +94,11 @@ jobs:
       # tarball inspected below has to reflect what a real build produces.
       - run: pnpm build
 
-      # Inspects the actual `npm pack` output (what `npm publish` would ship):
-      # the executable is present and keeps its shebang, THIRD_PARTY_NOTICES
-      # is included, dist/metafile-*.json is excluded, and nothing stray rode
-      # along. See packages/cli/scripts/verify-pack.ts for the checks.
+      # Inspects the actual `pnpm pack` output (the tarball `npm publish` ships):
+      # the executable is present and keeps its shebang, THIRD_PARTY_NOTICES is
+      # included, dist/metafile-*.json is excluded, no `catalog:` or `workspace:`
+      # specifier survived into the manifest, and nothing stray rode along.
+      # See packages/cli/scripts/verify-pack.ts for the checks.
       # `--fail-if-no-match` because a filter that matches nothing exits 0,
       # which would quietly turn this guard into a no-op that still reports green.
       - run: pnpm --filter @nat-ui/cli --fail-if-no-match run verify-pack
