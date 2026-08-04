@@ -1,5 +1,5 @@
 import {describe, expect, test} from 'vitest'
-import {fetchIndex, fetchItem, type FetchJson} from './fetch-item'
+import {fetchIndex, fetchItem, httpFetchJson, type FetchJson} from './fetch-item'
 
 const payload = {
   schemaVersion: '1',
@@ -79,6 +79,14 @@ describe('fetchItem', () => {
     await expect(fetchItem('https://r.test', '../secrets', serving({}))).rejects.toThrow(
       /not a valid component name/,
     )
+  })
+})
+
+describe('httpFetchJson', () => {
+  test('reports a connection failure with the URL', async () => {
+    const url = 'http://127.0.0.1:1/button.json'
+
+    await expect(httpFetchJson(url)).rejects.toThrow(new RegExp(`Could not reach ${url}`))
   })
 })
 

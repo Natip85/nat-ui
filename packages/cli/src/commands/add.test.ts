@@ -1,6 +1,6 @@
-import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises'
+import {mkdir, mkdtemp, readFile, rm, stat, writeFile} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
-import {join} from 'node:path'
+import {dirname, join} from 'node:path'
 import {CONFIG_FILE_NAME} from '@nat-ui/schema'
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 import type {FetchJson} from '../registry/fetch-item'
@@ -52,6 +52,18 @@ const documents: Record<string, unknown> = {
       {path: 'components/ui/mixed.tsx', type: 'ui', content: 'export const Mixed = () => null\n'},
       {path: 'lib/helper.ts', type: 'lib', content: 'export const helper = () => {}\n'},
     ],
+  },
+  'collider-a': {
+    schemaVersion: '1',
+    name: 'collider-a',
+    type: 'ui',
+    files: [{path: 'x/a.tsx', type: 'ui', content: 'FIRST\n'}],
+  },
+  'collider-b': {
+    schemaVersion: '1',
+    name: 'collider-b',
+    type: 'ui',
+    files: [{path: 'y/a.tsx', type: 'ui', content: 'SECOND\n'}],
   },
 }
 
@@ -352,5 +364,101 @@ describe('add', () => {
     expect(io.logs.join('\n')).toMatch(/Run this by hand/)
     // The files still landed; only the install failed.
     expect(await read('src/components/ui/button.tsx')).toBe(buttonSource)
+  })
+
+  test('refuses a ui alias that escapes the project via traversal', async () => {
+    const suffix = String(Date.now())
+    await writeFile(
+      join(cwd, CONFIG_FILE_NAME),
+      JSON.stringify({...config, aliases: {...config.aliases, ui: `@/../../escaped-${suffix}`}}),
+    )
+
+    const io = makeIo()
+    const code = await add(io, options())
+
+    expect(code).toBe(1)
+    expect(io.logs.join('\n')).toMatch(/outside the project/)
+    await expect(read('src/components/ui/button.tsx')).rejects.toThrow()
+    await expect(stat(join(dirname(cwd), `escaped-${suffix}`, 'button.tsx'))).rejects.toThrow()
+  })
+
+  test('refuses an absolute ui alias outside the project', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'nat-ui-evil-'))
+    await writeFile(
+      join(cwd, CONFIG_FILE_NAME),
+      JSON.stringify({...config, aliases: {...config.aliases, ui: outside}}),
+    )
+
+    const io = makeIo()
+    const code = await add(io, options())
+
+    expect(code).toBe(1)
+    expect(io.logs.join('\n')).toMatch(/outside the project/)
+    await expect(read('src/components/ui/button.tsx')).rejects.toThrow()
+    await expect(stat(join(outside, 'button.tsx'))).rejects.toThrow()
+
+    await rm(outside, {recursive: true, force: true})
+  })
+
+  test('returns 1 with guidance when a write fails partway through', async () => {
+    vi.resetModules()
+    vi.doMock('../fs/atomic-write', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../fs/atomic-write')>()
+      let calls = 0
+
+      return {
+        ...actual,
+        atomicWriteFile: (path: string, contents: string) => {
+          calls += 1
+          return calls === 2
+            ? Promise.reject(new Error('disk full'))
+            : actual.atomicWriteFile(path, contents)
+        },
+      }
+    })
+
+    try {
+      const {add: mockedAdd} = await import('./add')
+      const install = vi.fn((_pm: PackageManager, _packages: readonly string[], _cwd: string) =>
+        Promise.resolve(),
+      )
+      const io = makeIo({install})
+
+      const code = await mockedAdd(io, options({names: ['dialog']}))
+
+      expect(code).toBe(1)
+      expect(io.logs.join('\n')).toMatch(/disk full/)
+      expect(io.logs.join('\n')).toMatch(/button\.tsx/)
+      expect(io.logs.join('\n')).toMatch(/incomplete/)
+      expect(await read('src/components/ui/button.tsx')).toBeTruthy()
+      await expect(read('src/components/ui/dialog.tsx')).rejects.toThrow()
+      expect(install).not.toHaveBeenCalled()
+    } finally {
+      vi.doUnmock('../fs/atomic-write')
+      vi.resetModules()
+    }
+  })
+
+  test('refuses two items whose files would land at the same path', async () => {
+    const io = makeIo()
+    const code = await add(io, options({names: ['collider-a', 'collider-b']}))
+
+    expect(code).toBe(1)
+    expect(io.logs.join('\n')).toMatch(/collider-a/)
+    expect(io.logs.join('\n')).toMatch(/collider-b/)
+    await expect(read('src/components/ui/a.tsx')).rejects.toThrow()
+  })
+
+  test('leaves existing files unchanged when overwrite is declined', async () => {
+    await mkdir(join(cwd, 'src/components/ui'), {recursive: true})
+    await writeFile(join(cwd, 'src/components/ui/button.tsx'), 'mine\n')
+
+    const confirmOverwrite = vi.fn((_paths: readonly string[]) => Promise.resolve(false))
+    const io = makeIo({interactive: true, confirmOverwrite})
+    const code = await add(io, options())
+
+    expect(code).toBe(0)
+    expect(confirmOverwrite).toHaveBeenCalledTimes(1)
+    expect(await read('src/components/ui/button.tsx')).toBe('mine\n')
   })
 })

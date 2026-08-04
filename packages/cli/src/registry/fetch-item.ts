@@ -14,10 +14,20 @@ import {assertValidItemName} from './item-name'
  */
 export type FetchJson = (url: string) => Promise<{status: number; body: string}>
 
-export const httpFetchJson: FetchJson = async (url) => {
-  const response = await fetch(url)
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
 
-  return {status: response.status, body: await response.text()}
+export const httpFetchJson: FetchJson = async (url) => {
+  try {
+    const response = await fetch(url)
+
+    return {status: response.status, body: await response.text()}
+  } catch (error) {
+    throw new Error(
+      `Could not reach ${url}. Check your network connection and the registry URL (${messageOf(error)}).`,
+      {cause: error},
+    )
+  }
 }
 
 const parseJson = (body: string, url: string): unknown => {
