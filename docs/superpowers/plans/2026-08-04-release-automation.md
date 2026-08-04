@@ -6,7 +6,7 @@
 
 **Architecture:** A single workflow on pushes to `main` does two jobs depending on whether changesets are pending. With changesets present, `changesets/action` opens a "Version Packages" PR. With none present, the workflow packs the tarball with `pnpm` and publishes it with `npm`, which performs the OIDC exchange. The two tools are split deliberately: only pnpm resolves this repo's `catalog:`/`workspace:*` specifiers, and only npm can exchange an OIDC token for a publish credential.
 
-**Tech Stack:** GitHub Actions, `changesets/action@v2`, `@changesets/cli` 2.31.1, pnpm 10.34.5, npm 11.x, Node 24, TypeScript, Vitest.
+**Tech Stack:** GitHub Actions, `changesets/action@v1.9.0`, `@changesets/cli` 2.31.1, pnpm 10.34.5, npm 11.x, Node 24, TypeScript, Vitest.
 
 Design spec: `docs/superpowers/specs/2026-08-04-release-automation-design.md`.
 
@@ -15,7 +15,8 @@ Design spec: `docs/superpowers/specs/2026-08-04-release-automation-design.md`.
 - The workflow file must be exactly `.github/workflows/publish.yml`. npm matches the OIDC token's `workflow_ref` claim against the filename registered on the trust relationship, which is already set to `publish.yml`.
 - Publishing requires npm 11. npm 10.9.2 contains zero references to the OIDC exchange endpoint; 11.5.0 has it. Install and assert npm `^11.5.0` in CI.
 - The published tarball must be produced by `pnpm pack`, never `npm pack`. `packages/cli/package.json` declares dev dependencies as `catalog:` and `workspace:*`; pnpm resolves them, npm leaves them verbatim.
-- Never pass `publish-script` to `changesets/action`. With it, the action runs `changeset publish`, which spawns `pnpm publish` in this repo, and pnpm 10.34.5 cannot perform the OIDC exchange. Without it the action logs "Not publishing because no publish script found" and returns.
+- Never pass `publish` to `changesets/action`. With it, the action runs `changeset publish`, which spawns `pnpm publish` in this repo, and pnpm 10.34.5 cannot perform the OIDC exchange. Without it the action logs "Not publishing because no publish script found" and returns.
+- Pin `changesets/action@v1.9.0`. There is no stable `v2`: the only v2 refs are `v2.0.0-next.0` through `v2.0.0-next.4`, and `@v2` does not resolve to anything. v1 and the unreleased v2 also differ in naming — v1 takes `version` and `createGithubReleases` and emits `hasChangesets`, where v2 renamed them to `version-script`, `create-github-releases`, and `has-changesets`. Using a v2 name against v1 fails silently rather than loudly: an unknown input is ignored, and an unknown output reads as empty, which makes the publish gate skip and nothing ever ships.
 - No repository secrets. The default `GITHUB_TOKEN` covers the version PR, the tag, and the release; `id-token: write` covers npm.
 - `@nat-ui/cli` is the only publishable package. `@nat-ui/registry` and `@nat-ui/schema` are `private: true`.
 - Concurrency is serialized without `cancel-in-progress`.
@@ -430,7 +431,9 @@ The gate reports the current version and whether the registry already has it, in
 **Interfaces:**
 
 - Consumes: nothing from earlier tasks.
-- Produces: `hasVersion(document: unknown, version: string): boolean` from `packages/cli/scripts/registry-versions.ts`. Task 3 consumes the executable `packages/cli/scripts/is-published.ts` through the package script `is-published`, whose stdout is exactly two lines: `version=<version>` then `published=<true|false>`.
+- Produces: the pure version lookup in `packages/cli/scripts/registry-versions.ts`. Task 3 consumes the executable `packages/cli/scripts/is-published.ts` through the package script `is-published`, whose stdout is exactly two lines: `version=<version>` then `published=<true|false>`.
+
+As implemented, the lookup is two functions rather than the single `hasVersion(document, version)` sketched below: `versionsOf(document)` yields the versions map or `undefined` when the response has none to consult, and `hasVersion(versions, version)` answers against that map. The split exists because a document with no usable `versions` map is not evidence that a version is unpublished, and one boolean cannot carry both answers.
 
 The pure function lives in its own module because `is-published.ts` performs a network request at import time; a test importing it would hit the network.
 
@@ -690,24 +693,30 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Deliberately no `publish-script`. With one, the action runs
+      # Deliberately no `publish` script. With one, the action runs
       # `changeset publish`, which spawns `pnpm publish` in this repo because
       # `packageManager` names pnpm — and pnpm 10 cannot perform npm's OIDC
       # exchange. Without one, the action only ever opens the version PR.
+      # Pinned to v1.9.0, the newest release: `@v2` resolves to nothing, since
+      # the only v2 refs are `v2.0.0-next.*` prereleases. The input and output
+      # names below are v1's; v2 renames them, and a v2 name here would be
+      # ignored rather than rejected.
       - name: Open or update the Version Packages PR
         id: changesets
-        uses: changesets/action@v2
+        uses: changesets/action@v1.9.0
         with:
-          version-script: pnpm version-packages
-          create-github-releases: false
+          version: pnpm version-packages
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Writes `version=` and `published=` straight to the step outputs.
+      # `--fail-if-no-match` because a filter matching nothing exits 0, which
+      # would leave `published` empty and silently skip the release.
       - name: Decide whether to publish
         id: gate
-        if: steps.changesets.outputs.has-changesets == 'false'
-        run: pnpm --silent --filter @nat-ui/cli run is-published >> "$GITHUB_OUTPUT"
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm --silent --filter @nat-ui/cli --fail-if-no-match run is-published >> "$GITHUB_OUTPUT"
 
       # ci.yml already covers main, but this guarantees the artifact sent to npm
       # was built from a tree that compiled, type-checked, passed its tests, and
@@ -771,15 +780,17 @@ syntax error, fix the YAML before continuing.
 Confirm by reading the file, since none of these can be caught by a linter:
 
 - The filename is exactly `.github/workflows/publish.yml`.
-- There is no `publish-script:` input anywhere.
+- There is no `publish:` input passed to `changesets/action`.
+- The action is pinned to `changesets/action@v1.9.0`, and uses v1's names: `version`, `createGithubReleases`, `hasChangesets`.
 - `id-token: write` is present.
 - `concurrency` has no `cancel-in-progress`.
 - Packing uses `pnpm pack`; publishing uses `npm publish`.
 - No `secrets.` reference other than `secrets.GITHUB_TOKEN`.
 
-Run: `rg -n "publish-script|cancel-in-progress|npm pack|secrets\." .github/workflows/publish.yml`
+Run: `rg -n "^\s+publish:|cancel-in-progress|npm pack|version-script|create-github-releases|has-changesets|secrets\." .github/workflows/publish.yml`
 
-Expected: only two `secrets.GITHUB_TOKEN` matches, nothing else.
+Expected: only two `secrets.GITHUB_TOKEN` matches, nothing else. Any hit on a
+v2-style name means the action would silently ignore it.
 
 - [ ] **Step 4: Run format and lint**
 
