@@ -1,16 +1,22 @@
 import {execFile} from 'node:child_process'
-import {mkdtemp, readFile, rm} from 'node:fs/promises'
+import {mkdtemp, readdir, readFile, rm, stat} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {promisify} from 'node:util'
 
+import {findUnresolvedSpecifiers} from './manifest'
+
 // This file is the executable entry point run directly in CI (never
-// imported), so side effects and `process.exitCode` are fine here. It shells
-// out to `npm` and `tar` rather than a bundler-specific API, since what
-// matters is exactly what `npm publish` would ship — not what our own build
-// tooling thinks it produced. That also means this assumes a POSIX-ish
-// runner (a real `tar` binary, `npm` resolvable without a shell); it is only
+// imported), so side effects and `process.exitCode` are fine here.
+//
+// It packs with `pnpm`, not `npm`, because that is what the release publishes:
+// this repo authors dev dependencies as `catalog:` and `workspace:*`, and only
+// pnpm resolves those into installable ranges. Verifying an `npm pack` tarball
+// would check a manifest that never ships — a verifier that can be wrong while
+// green.
+//
+// It shells out to `pnpm` and `tar` and assumes a POSIX-ish runner; it is only
 // ever run from a single Linux CI job, not across the OS/Node matrix.
 const execFileAsync = promisify(execFile)
 
@@ -19,67 +25,12 @@ const METAFILE_PATTERN = /^dist\/metafile-.*\.json$/
 
 interface PackedFile {
   readonly path: string
-  readonly size: number
   readonly mode: number
-}
-
-interface PackResult {
-  readonly filename: string
-  readonly files: readonly PackedFile[]
+  readonly size: number
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
-
-const asString = (value: unknown, description: string): string => {
-  if (typeof value !== 'string') throw new Error(`Expected ${description} to be a string.`)
-
-  return value
-}
-
-const asNumber = (value: unknown, description: string): number => {
-  if (typeof value !== 'number') throw new Error(`Expected ${description} to be a number.`)
-
-  return value
-}
-
-const asPackedFile = (value: unknown): PackedFile => {
-  if (!isRecord(value)) throw new Error('Expected each `npm pack` file entry to be an object.')
-
-  return {
-    path: asString(value.path, 'a packed file `path`'),
-    size: asNumber(value.size, 'a packed file `size`'),
-    mode: asNumber(value.mode, 'a packed file `mode`'),
-  }
-}
-
-/**
- * `npm pack --json` reports exactly what `npm publish` would ship, already
- * filtered through package.json's `files` allowlist — so this only needs to
- * assert against that real, resolved list rather than re-implement npm's own
- * glob matching.
- */
-const parsePackOutput = (raw: string): PackResult => {
-  const parsed: unknown = JSON.parse(raw)
-  if (!Array.isArray(parsed)) throw new Error('Expected `npm pack --json` to output an array.')
-  if (parsed.length !== 1) {
-    throw new Error(
-      `Expected \`npm pack\` to report exactly one package, got ${String(parsed.length)}.`,
-    )
-  }
-
-  const entry: unknown = parsed[0]
-  if (!isRecord(entry)) throw new Error('Expected the `npm pack` entry to be an object.')
-
-  const {files} = entry
-  if (!Array.isArray(files))
-    throw new Error('Expected `npm pack` output to include a `files` array.')
-
-  return {
-    filename: asString(entry.filename, 'the `npm pack` `filename`'),
-    files: files.map(asPackedFile),
-  }
-}
 
 /** Read from package.json rather than hardcoded, so this can't drift from the real bin target. */
 const readBinPath = async (): Promise<string> => {
@@ -96,6 +47,52 @@ const readBinPath = async (): Promise<string> => {
   }
 
   return target.replace(/^\.\//, '')
+}
+
+/**
+ * Packs into a directory created empty for the purpose and then reads it back,
+ * rather than parsing pnpm's stdout — the output format is not contractual,
+ * but "the only tarball in an empty directory" is unambiguous.
+ */
+const packWithPnpm = async (destination: string): Promise<string> => {
+  await execFileAsync('pnpm', ['pack', '--pack-destination', destination], {cwd: PACKAGE_DIR})
+
+  const tarballs = (await readdir(destination)).filter((entry) => entry.endsWith('.tgz'))
+  // Destructured rather than indexed: `noUncheckedIndexedAccess` makes
+  // `tarballs[0]` possibly-undefined, and a type assertion here would be
+  // asserting exactly the thing this check exists to establish.
+  const [tarball, ...rest] = tarballs
+  if (tarball === undefined || rest.length > 0) {
+    throw new Error(
+      `Expected exactly one tarball in ${destination}, found ${String(tarballs.length)}.`,
+    )
+  }
+
+  return tarball
+}
+
+/** Enumerate the extracted tree, recording each file's mode so the bin's execute bit can be checked. */
+const listPackedFiles = async (root: string): Promise<readonly PackedFile[]> => {
+  const files: PackedFile[] = []
+
+  const walk = async (directory: string, prefix: string): Promise<void> => {
+    for (const entry of await readdir(directory, {withFileTypes: true})) {
+      const absolute = join(directory, entry.name)
+      const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`
+
+      if (entry.isDirectory()) {
+        await walk(absolute, relative)
+        continue
+      }
+
+      const stats = await stat(absolute)
+      files.push({path: relative, mode: stats.mode & 0o777, size: stats.size})
+    }
+  }
+
+  await walk(root, '')
+
+  return files
 }
 
 /**
@@ -119,10 +116,12 @@ const main = async (): Promise<void> => {
   const issues: string[] = []
 
   try {
-    const {stdout} = await execFileAsync('npm', ['pack', '--json', '--pack-destination', workDir], {
-      cwd: PACKAGE_DIR,
-    })
-    const {filename, files} = parsePackOutput(stdout)
+    const filename = await packWithPnpm(workDir)
+    await execFileAsync('tar', ['-xzf', filename, '-C', workDir], {cwd: workDir})
+
+    // npm and pnpm both wrap a tarball's contents in a top-level "package/".
+    const packageRoot = join(workDir, 'package')
+    const files = await listPackedFiles(packageRoot)
     const byPath = new Map(files.map((file) => [file.path, file] as const))
 
     const bin = byPath.get(binPath)
@@ -137,9 +136,7 @@ const main = async (): Promise<void> => {
         )
       }
 
-      await execFileAsync('tar', ['-xzf', filename, '-C', workDir], {cwd: workDir})
-      // npm wraps every tarball's contents in a top-level "package/" directory.
-      const contents = await readFile(join(workDir, 'package', binPath), 'utf8')
+      const contents = await readFile(join(packageRoot, binPath), 'utf8')
       if (!contents.startsWith('#!')) {
         issues.push(
           `Executable "${binPath}" is packed without a shebang line (the build likely stripped it).`,
@@ -161,6 +158,14 @@ const main = async (): Promise<void> => {
       )
     }
 
+    const manifest: unknown = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'))
+    for (const {field, name, specifier} of findUnresolvedSpecifiers(manifest)) {
+      issues.push(
+        `Dependency "${name}" in "${field}" is packed as "${specifier}", which no npm client can ` +
+          'install. The tarball was built by a tool that does not resolve pnpm protocols.',
+      )
+    }
+
     if (issues.length > 0) {
       console.error('Packed tarball for @nat-ui/cli failed verification:\n')
       for (const issue of issues) console.error(`  - ${issue}`)
@@ -174,7 +179,7 @@ const main = async (): Promise<void> => {
     }
 
     console.log(
-      `Verified packed tarball shape for @nat-ui/cli (${String(files.length)} files; ` +
+      `Verified packed tarball shape and manifest for @nat-ui/cli (${String(files.length)} files; ` +
         `contents of dist/ are not individually enumerated).`,
     )
   } finally {
