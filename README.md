@@ -88,6 +88,30 @@ To run the CLI from source without building:
 pnpm --filter @nat-ui/cli start --help
 ```
 
+## Releasing
+
+Releases run in CI. The normal path never involves publishing from a laptop.
+
+1. Describe user-visible changes in a changeset: `pnpm changeset`. Commit it
+   with the work it describes.
+2. When that merges to `main`, the publish workflow opens a **Version Packages**
+   pull request that bumps the version and writes the changelog.
+3. Merging that pull request publishes `@nat-ui/cli` to npm, tags the commit,
+   and creates a GitHub release.
+
+Publishing authenticates with GitHub's OIDC identity through npm's trusted
+publishing, so no npm token is stored in this repository, and every published
+version carries a provenance attestation. The workflow filename
+(`.github/workflows/publish.yml`) is registered on the package's npm trust
+relationship and cannot be changed without updating that setting.
+
+`pnpm release` publishes locally and is refused by default, because it goes
+through `pnpm publish`, which cannot perform npm's OIDC exchange and so
+produces a version with no provenance. It remains available for the case where
+CI cannot publish at all — set `NAT_UI_ALLOW_LOCAL_RELEASE=1` — but a version
+shipped that way is a trust-level downgrade for anyone installing under
+`--trust-policy no-downgrade`.
+
 ## License
 
 MIT
