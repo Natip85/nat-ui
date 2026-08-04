@@ -146,3 +146,31 @@ describe('applyTheme', () => {
     expect(asSlate.charCodeAt(0)).toBe(0xfeff)
   })
 })
+
+describe('tailwind theme mapping', () => {
+  test('maps every colour token into the design system', () => {
+    const result = applyTheme(withImport, PRESETS.neutral)
+
+    expect(result).toContain('@theme inline {')
+    expect(result).toContain('--color-background: var(--background);')
+    expect(result).toContain('--color-primary: var(--primary);')
+    expect(result).toContain('--color-destructive-foreground: var(--destructive-foreground);')
+    expect(result).toContain('--color-ring: var(--ring);')
+  })
+
+  test('turns the radius token into a scale rather than a colour', () => {
+    const result = applyTheme(withImport, PRESETS.neutral)
+
+    expect(result).toContain('--radius-lg: var(--radius);')
+    expect(result).toContain('--radius-md: calc(var(--radius) - 2px);')
+    expect(result).not.toContain('--color-radius')
+  })
+
+  test('keeps the mapping inside the marked block so a re-run replaces it', () => {
+    const once = applyTheme(withImport, PRESETS.neutral)
+    const twice = applyTheme(once, PRESETS.slate)
+
+    expect(countOf(twice, '@theme inline {')).toBe(1)
+    expect(twice.indexOf('@theme inline {')).toBeLessThan(twice.indexOf(THEME_END))
+  })
+})

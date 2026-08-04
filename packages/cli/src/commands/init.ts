@@ -1,11 +1,12 @@
 import {mkdir} from 'node:fs/promises'
-import {dirname, isAbsolute, join, relative, sep} from 'node:path'
+import {dirname, join} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
-import {detectProject, targetDirForPrefix, toPosixPath} from '../detect/project'
+import {detectProject, toPosixPath} from '../detect/project'
 import {atomicWriteFile} from '../fs/atomic-write'
 import {readText} from '../fs/read-text'
+import {aliasBaseDir, aliasToPath, isWithinRoot} from '../paths/alias'
 import {defaultAnswers, type Asker} from '../prompts/ask'
 import {cnTemplate} from '../templates/cn'
 import {applyTheme} from '../theme/apply'
@@ -22,30 +23,6 @@ export interface InitIo {
 }
 
 export const INSTALLED_PACKAGES = ['clsx', 'tailwind-merge'] as const
-
-/**
- * Judged purely on the path the user gave — never on where it resolves on disk — so
- * a stylesheet that is itself a symlink pointing outside the project (a real
- * monorepo pattern) is still accepted. Only a path that already reads outside the
- * project root, like `../../elsewhere.css`, is refused.
- *
- * Checks for a leading `..` *segment* rather than just the characters `..`, so a
- * legitimately in-root name that merely starts with two dots — `..styles/globals.css`,
- * naming a real directory called `..styles` — is not mistaken for an escape.
- */
-const isWithinRoot = (root: string, target: string): boolean => {
-  const rel = relative(root, target)
-
-  return !isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)
-}
-
-/** `@/lib/utils` with prefix `@` and a paths target rooted at `src` → `src/lib/utils.ts`. */
-const utilsPath = (alias: string, prefix: string, baseDir: string, tsx: boolean): string => {
-  const withoutPrefix = alias.startsWith(`${prefix}/`) ? alias.slice(prefix.length + 1) : alias
-  const extension = tsx ? '.ts' : '.js'
-
-  return join(baseDir, `${withoutPrefix}${extension}`)
-}
 
 export const init = async (io: InitIo, options: {yes: boolean}): Promise<number> => {
   const detected = await detectProject(io.cwd, io.env)
@@ -125,24 +102,11 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
     return 1
   }
 
-  // Prefer where tsconfig's `paths` says the alias the user actually chose
-  // resolves — not whichever prefix was merely detected, since the prompt can
-  // override it — falling back to a guess from the stylesheet's location when
-  // there's nothing more reliable to go on, or when the `paths` target turns
-  // out to point outside the project (a hint, not a user instruction, so it's
-  // discarded rather than trusted enough to write there).
-  const cssBaseDir = answers.css.startsWith('src/') ? 'src' : ''
-  const aliasTargetDir = targetDirForPrefix(detected.aliasTargets, answers.aliasPrefix)
-  const utilsBaseDir =
-    aliasTargetDir !== undefined && isWithinRoot(io.cwd, join(io.cwd, aliasTargetDir))
-      ? aliasTargetDir
-      : cssBaseDir
-  const relativeUtils = utilsPath(
-    aliasesFor(answers.aliasPrefix).utils,
-    answers.aliasPrefix,
-    utilsBaseDir,
-    answers.tsx,
-  )
+  // Use the prefix the user chose at the prompt, not the detected default —
+  // the prompt can override it.
+  const utilsBaseDir = aliasBaseDir(io.cwd, detected.aliasTargets, answers.aliasPrefix, answers.css)
+  const extension = answers.tsx ? '.ts' : '.js'
+  const relativeUtils = `${aliasToPath(aliasesFor(answers.aliasPrefix).utils, answers.aliasPrefix, utilsBaseDir)}${extension}`
   const absoluteUtils = join(io.cwd, relativeUtils)
 
   if ((await readText(absoluteUtils)) === undefined) {

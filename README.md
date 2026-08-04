@@ -7,8 +7,8 @@ configure.
 Built on [Base UI](https://base-ui.com) for behavior and Tailwind CSS for
 styling. TypeScript throughout.
 
-> Early development. `init` is the only command that exists so far; `add` and
-> the components it installs are being built next.
+> Early development. `init` and `add` are available; more components are on
+> the way.
 
 ## Usage
 
@@ -31,17 +31,43 @@ Re-running `init` is safe. It updates the theme block in your stylesheet in
 place instead of duplicating it, and if `components.json` already exists it
 asks before overwriting — declining, and changing nothing, when it can't ask.
 
-That config is what `add` will read once it exists, so the components it copies
-land where you already keep things, with imports rewritten to your aliases.
+That config is what `add` reads, so the components it copies land where you
+already keep things, with imports rewritten to your aliases.
+
+### Adding components
+
+```bash
+npx @nat-ui/cli add button
+```
+
+Components are copied into the directory your `components.json` names, with
+imports rewritten to your aliases. Naming a component pulls in whatever it
+depends on, so `add dialog` also writes `button`.
+
+```bash
+npx @nat-ui/cli add button input dialog
+npx @nat-ui/cli add dialog --overwrite
+```
+
+Available components: `button`, `input`, `dialog`.
+
+`add` writes TypeScript. A project configured with `"tsx": false` is not
+supported yet.
+
+If you ran `init` with 0.1.0, run it again before adding components: the theme
+block it wrote does not map the tokens into Tailwind's design system, so
+components styled against them render unstyled. Re-running replaces the block in
+place.
 
 ## Repository layout
 
-| Path                | Purpose                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `packages/schema`   | Zod schemas and types shared by the CLI and the registry     |
-| `packages/registry` | Canonical component source and the typed registry definition |
-| `packages/cli`      | The `nat-ui` CLI, published as `@nat-ui/cli`                 |
-| `apps/docs`         | Documentation site, which also serves the registry JSON      |
+| Path                | Purpose                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `packages/schema`   | Zod schemas and types shared by the CLI and the registry |
+| `packages/registry` | Canonical component source and registry build scripts    |
+| `packages/cli`      | The `nat-ui` CLI, published as `@nat-ui/cli`             |
+| `r/`                | Built registry JSON served over HTTP for local testing   |
+| `apps/docs`         | Documentation site                                       |
 
 ## Development
 

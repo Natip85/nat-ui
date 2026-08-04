@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import {createRequire} from 'node:module'
 import {parseArgs} from 'node:util'
+import {add} from './commands/add'
 import {init} from './commands/init'
 import {isEntryPoint} from './is-entry-point'
-import {ask, confirmOverwrite} from './prompts/ask'
+import {ask, confirmOverwrite, confirmOverwriteFiles} from './prompts/ask'
+import {httpFetchJson} from './registry/fetch-item'
 
 // Resolved at runtime rather than imported, so `../package.json` points at this
 // package whether we are running from `src/` or from the bundled `dist/`.
@@ -16,12 +18,15 @@ export const help = `
     $ nat-ui <command> [options]
 
   Commands
-    init    Configure a project to use nat-ui
+    init                 Configure a project to use nat-ui
+    add <component...>   Add components to your project
 
   Options
-    -y, --yes       Accept every default without asking
-    -v, --version   Print the version
-    -h, --help      Show this message
+    -y, --yes            Accept every default without asking
+        --overwrite      Replace files that already exist
+        --registry <url> Use a different registry
+    -v, --version        Print the version
+    -h, --help           Show this message
 `
 
 type Log = (message: string) => void
@@ -42,8 +47,26 @@ const firstSentence = (message: string): string => {
   return first === undefined ? message : `${first}.`
 }
 
+const install = async (
+  pm: import('./detect/package-manager').PackageManager,
+  packages: readonly string[],
+  cwd: string,
+): Promise<void> => {
+  const {installCommand} = await import('./detect/package-manager')
+  const {spawnInstall} = await import('./install/spawn-install')
+  const {command: bin, args} = installCommand(pm, packages)
+
+  await spawnInstall(bin, args, cwd)
+}
+
 export const run = async (argv: readonly string[], log: Log): Promise<number> => {
-  let values: {yes: boolean; version: boolean; help: boolean}
+  let values: {
+    yes: boolean
+    overwrite: boolean
+    registry?: string | undefined
+    version: boolean
+    help: boolean
+  }
   let positionals: string[]
 
   try {
@@ -51,6 +74,8 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
       args: [...argv],
       options: {
         yes: {type: 'boolean', short: 'y', default: false},
+        overwrite: {type: 'boolean', default: false},
+        registry: {type: 'string'},
         version: {type: 'boolean', short: 'v', default: false},
         help: {type: 'boolean', short: 'h', default: false},
       },
@@ -82,6 +107,12 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
   }
 
   if (command === 'init') {
+    if (values.overwrite === true || values.registry !== undefined) {
+      log(`init takes neither --overwrite nor --registry.\n${help}`)
+
+      return 1
+    }
+
     const [, extra] = positionals
     if (extra !== undefined) {
       log(`Unknown argument: '${extra}'.\n${help}`)
@@ -96,16 +127,30 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
         interactive: process.stdin.isTTY === true,
         ask,
         confirmOverwrite,
-        install: async (pm, packages, cwd) => {
-          const {installCommand} = await import('./detect/package-manager')
-          const {spawnInstall} = await import('./install/spawn-install')
-          const {command: bin, args} = installCommand(pm, packages)
-
-          await spawnInstall(bin, args, cwd)
-        },
+        install,
         log,
       },
       {yes: values.yes},
+    )
+  }
+
+  if (command === 'add') {
+    return add(
+      {
+        cwd: process.cwd(),
+        env: process.env,
+        interactive: process.stdin.isTTY === true,
+        fetchJson: httpFetchJson,
+        confirmOverwrite: confirmOverwriteFiles,
+        install,
+        log,
+      },
+      {
+        names: positionals.slice(1),
+        yes: values.yes ?? false,
+        overwrite: values.overwrite ?? false,
+        registry: values.registry,
+      },
     )
   }
 

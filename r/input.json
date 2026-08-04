@@ -1,0 +1,15 @@
+{
+  "name": "input",
+  "type": "ui",
+  "dependencies": [
+    "@base-ui/react"
+  ],
+  "files": [
+    {
+      "path": "components/ui/input.tsx",
+      "type": "ui",
+      "content": "import {Input as BaseInput} from '@base-ui/react/input'\nimport type {ComponentProps} from 'react'\nimport {cn} from '@/lib/utils'\n\nexport type InputProps = Omit<ComponentProps<typeof BaseInput>, 'className'> & {\n  className?: string\n}\n\n/**\n * Base UI's input rather than a bare element, so that nesting it in a\n * `Field.Root` later wires up validation state and labelling with no change\n * here. The `data-[invalid]` styles are what that state drives.\n */\nexport function Input({className, ...props}: InputProps) {\n  return (\n    <BaseInput\n      className={cn(\n        'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[invalid]:border-destructive data-[invalid]:ring-destructive',\n        className,\n      )}\n      {...props}\n    />\n  )\n}\n"
+    }
+  ],
+  "schemaVersion": "1"
+}

@@ -5,12 +5,25 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "build": "tsx scripts/build-registry.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@nat-ui/schema": "workspace:*"
   },
   "devDependencies": {
+    "@base-ui/react": "catalog:",
+    "@testing-library/dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "happy-dom": "catalog:",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwind-merge": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }
