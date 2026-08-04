@@ -1,11 +1,6 @@
-import {DocsLayout} from 'fumadocs-ui/layouts/docs'
-import {baseOptions} from '@/lib/layout.shared'
+import {DocsRouteLayout} from '@/lib/docs-route'
 import {docsSource} from '@/lib/source'
 
 export default function Layout({children}: LayoutProps<'/docs'>) {
-  return (
-    <DocsLayout tree={docsSource.getPageTree()} {...baseOptions()}>
-      {children}
-    </DocsLayout>
-  )
+  return <DocsRouteLayout source={docsSource}>{children}</DocsRouteLayout>
 }

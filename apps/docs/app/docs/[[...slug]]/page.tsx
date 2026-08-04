@@ -1,26 +1,11 @@
-import {DocsBody, DocsDescription, DocsPage, DocsTitle} from 'fumadocs-ui/layouts/docs/page'
-import {createRelativeLink} from 'fumadocs-ui/mdx'
 import type {Metadata} from 'next'
-import {notFound} from 'next/navigation'
-import {getMDXComponents} from '@/components/mdx'
+import {docsPageMetadata, renderDocsPage} from '@/lib/docs-route'
 import {docsSource} from '@/lib/source'
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
-  const params = await props.params
-  const page = docsSource.getPage(params.slug)
-  if (!page) notFound()
+  const {slug} = await props.params
 
-  const MDX = page.data.body
-
-  return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
-      <DocsBody>
-        <MDX components={getMDXComponents({a: createRelativeLink(docsSource, page)})} />
-      </DocsBody>
-    </DocsPage>
-  )
+  return renderDocsPage(docsSource, slug)
 }
 
 export function generateStaticParams() {
@@ -28,9 +13,7 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): Promise<Metadata> {
-  const params = await props.params
-  const page = docsSource.getPage(params.slug)
-  if (!page) notFound()
+  const {slug} = await props.params
 
-  return {title: page.data.title, description: page.data.description}
+  return docsPageMetadata(docsSource, slug)
 }
