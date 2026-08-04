@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises'
 import {fileURLToPath} from 'node:url'
 
-import {hasVersion} from './registry-versions'
+import {hasVersion, versionsOf} from './registry-versions'
 
 // Executable entry point for CI (never imported): it prints `key=value` lines
 // the workflow appends directly to `$GITHUB_OUTPUT`.
@@ -41,7 +41,19 @@ const main = async (): Promise<void> => {
   }
 
   const document: unknown = await response.json()
-  process.stdout.write(`version=${version}\npublished=${String(hasVersion(document, version))}\n`)
+  const versions = versionsOf(document)
+
+  // A 200 with no usable "versions" map (e.g. `{}`) is not the registry
+  // saying "not published" — it is a response we don't understand, and
+  // guessing here is the exact mistake this script exists to avoid.
+  if (versions === undefined) {
+    throw new Error(
+      `Registry response for ${name} from ${REGISTRY} has no usable "versions" map, so whether ` +
+        `${version} is already published is unknown.`,
+    )
+  }
+
+  process.stdout.write(`version=${version}\npublished=${String(hasVersion(versions, version))}\n`)
 }
 
 await main()
