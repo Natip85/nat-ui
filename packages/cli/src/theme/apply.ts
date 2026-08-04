@@ -1,4 +1,4 @@
-import type {ThemePreset} from './presets'
+import {THEME_TOKENS, type ThemePreset} from './presets'
 
 export const THEME_START = '/* nat-ui theme start */'
 export const THEME_END = '/* nat-ui theme end */'
@@ -13,6 +13,26 @@ const declarations = (tokens: Record<string, string>): string =>
     .map(([name, value]) => `  ${name}: ${value};`)
     .join('\n')
 
+// `--radius` is a length, not a colour, and Tailwind spells its scale
+// differently, so it is mapped by hand below rather than in this loop.
+const COLOR_TOKENS = THEME_TOKENS.filter((token) => token !== '--radius')
+
+/**
+ * Tailwind v4 builds utilities from `@theme` variables, so the raw tokens above
+ * produce no `bg-primary` on their own. The `inline` form points a design token
+ * at a variable defined elsewhere, which is what keeps the `.dark` override
+ * working: the utility resolves through `var(--primary)` at use time instead of
+ * being frozen to the light value.
+ */
+const mapping = (): string =>
+  [
+    ...COLOR_TOKENS.map((token) => `  --color-${token.slice('--'.length)}: var(${token});`),
+    '  --radius-sm: calc(var(--radius) - 4px);',
+    '  --radius-md: calc(var(--radius) - 2px);',
+    '  --radius-lg: var(--radius);',
+    '  --radius-xl: calc(var(--radius) + 4px);',
+  ].join('\n')
+
 const block = (preset: ThemePreset): string =>
   [
     THEME_START,
@@ -22,6 +42,10 @@ const block = (preset: ThemePreset): string =>
     '',
     '.dark {',
     declarations(preset.dark),
+    '}',
+    '',
+    '@theme inline {',
+    mapping(),
     '}',
     THEME_END,
   ].join('\n')
