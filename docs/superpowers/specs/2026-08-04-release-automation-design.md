@@ -119,10 +119,8 @@ updating the npm setting in the same change.
 
 Permissions are the union of what the two phases need: `id-token: write` for the
 OIDC exchange, `contents: write` for tags, and `pull-requests: write` for the
-version PR. Two credentials are in play and it is worth being precise about
-which does what: the PAT is passed to `changesets/action` so that the version PR
-it opens triggers CI, while the workflow's own `GITHUB_TOKEN` covers the tag and
-release it creates directly.
+version PR. The default `GITHUB_TOKEN` covers all of it; no secret is stored in
+the repository, which is the point of publishing this way.
 
 Concurrency is serialized on the workflow, and — unlike `ci.yml` —
 **without `cancel-in-progress`**. Cancelling a publish mid-flight is precisely
@@ -183,6 +181,28 @@ compiled, type-checked, passed its tests, and packed correctly. Coordinating wit
 a separate workflow's result via `workflow_run` would be cheaper and considerably
 easier to get subtly wrong.
 
+### No stored credential for the version PR
+
+GitHub does not start workflow runs for events created with the default
+`GITHUB_TOKEN`, so the Version Packages PR arrives without CI checks. The usual
+remedy is a personal access token, and this design deliberately declines it.
+
+Adding a standing, long-lived secret to bypass a safety mechanism would undercut
+the reason for adopting OIDC in the first place. Such a token also expires, and
+its expiry would surface as a release that mysteriously stops working rather than
+as anything self-explanatory.
+
+Declining it is cheap here for three reasons. `main` has no branch protection or
+rulesets, so an unchecked PR is not blocked from merging. The PR contains only a
+version bump, a generated changelog, and a deleted changeset file — no source
+code. And the checks that matter still run: `ci.yml` on the merge commit, and
+`build`, `typecheck`, `test`, and `verify-pack` inside the publish job before
+anything is sent to npm. The suppression applies only to GitHub Actions runs, so
+third-party reviewers such as CodeRabbit still see the PR normally.
+
+If `main` later requires status checks, the answer is `actions/create-github-app-token`,
+which mints a short-lived token per run, rather than storing a permanent one.
+
 ### Failure modes
 
 Publishing is the last step, after every check has passed. A missing or
@@ -209,17 +229,12 @@ Two changes:
 
 ## Manual setup, which cannot be automated from here
 
-Both must exist before the first automated publish.
+One thing, and it is already done.
 
-1. **The trust relationship on npm.** `@nat-ui/cli` → Settings → Trusted
-   Publishing → GitHub Actions, repository `Natip85/nat-ui`, workflow
-   `publish.yml`. This is already configured. npm supports trusted publishing
-   only from GitHub-hosted runners, which is what this workflow uses.
-2. **A PAT for the version PR.** PRs opened with the default `GITHUB_TOKEN` do
-   not trigger other workflows, so the Version Packages PR would arrive without
-   CI checks. A fine-grained token with contents and pull-request write access,
-   stored as the repository secret `RELEASE_PR_TOKEN` and passed to the action,
-   restores them.
+**The trust relationship on npm.** `@nat-ui/cli` → Settings → Trusted Publishing
+→ GitHub Actions, repository `Natip85/nat-ui`, workflow `publish.yml`. npm
+supports trusted publishing only from GitHub-hosted runners, which is what this
+workflow uses.
 
 npm's form states the workflow must already exist in `.github/workflows/`. It
 does not yet, so if npm rejects or later invalidates the trust relationship, the
