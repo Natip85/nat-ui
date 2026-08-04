@@ -1,12 +1,14 @@
 import type {RegistryItem} from '@nat-ui/schema'
-import {describe, expect, test} from 'vitest'
+import {describe, expect, it, test} from 'vitest'
 import {
   byName,
   importSpecifiers,
   normalizeNewlines,
+  packageNameOf,
   serialize,
   toIndex,
   toPayload,
+  undeclaredDependencies,
   unsupportedAliasImports,
 } from './build-registry'
 
@@ -135,5 +137,93 @@ describe('byName', () => {
 describe('serialize', () => {
   test('writes two-space JSON with a trailing newline', () => {
     expect(serialize({a: 1})).toBe('{\n  "a": 1\n}\n')
+  })
+})
+
+describe('packageNameOf', () => {
+  it('returns the package name for a bare specifier', () => {
+    expect(packageNameOf('clsx')).toBe('clsx')
+  })
+
+  it('keeps both segments of a scoped package', () => {
+    expect(packageNameOf('@base-ui/react')).toBe('@base-ui/react')
+  })
+
+  it('strips a subpath from a scoped package', () => {
+    expect(packageNameOf('@base-ui/react/button')).toBe('@base-ui/react')
+  })
+
+  it('strips a subpath from an unscoped package', () => {
+    expect(packageNameOf('lucide-react/icons/x')).toBe('lucide-react')
+  })
+
+  it('ignores a relative import', () => {
+    expect(packageNameOf('./sibling')).toBeUndefined()
+  })
+
+  it('ignores an alias import', () => {
+    expect(packageNameOf('@/lib/utils')).toBeUndefined()
+  })
+
+  it('ignores a node builtin', () => {
+    expect(packageNameOf('node:path')).toBeUndefined()
+  })
+})
+
+describe('undeclaredDependencies', () => {
+  it('finds an import that is not declared', () => {
+    const source = "import clsx from 'clsx'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+
+  it('accepts an import that is declared', () => {
+    const source = "import {Button} from '@base-ui/react/button'\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('allows react without a declaration, because consumers already have it', () => {
+    const source = "import type {ComponentProps} from 'react'\nimport 'react-dom'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+
+  it('ignores the utils alias, which init writes rather than installs', () => {
+    const source = "import {cn} from '@/lib/utils'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+
+  it('reports each missing package once', () => {
+    const source = "import 'clsx'\nimport {x} from 'clsx'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+})
+
+describe('toPayload dependency validation', () => {
+  it('refuses a file importing a package the item does not declare', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "import clsx from 'clsx'\n"
+
+    expect(() => toPayload(item, read)).toThrow(/clsx/)
+  })
+
+  it('accepts a file whose imports are all declared', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "import {Input} from '@base-ui/react/input'\n"
+
+    expect(toPayload(item, read).files[0]?.content).toContain('@base-ui/react/input')
   })
 })

@@ -50,6 +50,49 @@ export const unsupportedAliasImports = (source: string): string[] => [
   ...dynamicAliasImports(source),
 ]
 
+/**
+ * Packages a consuming project necessarily already has. `add` never installs
+ * them, so an item declaring them would be describing something it does not
+ * control.
+ */
+const ASSUMED_PRESENT = new Set(['react', 'react-dom'])
+
+/**
+ * The npm package a bare specifier resolves to, or `undefined` when the
+ * specifier is not an npm package at all. Alias imports are handled by
+ * `unsupportedAliasImports`; relative imports cannot occur, because every
+ * served file is written to a flat directory.
+ */
+export const packageNameOf = (specifier: string): string | undefined => {
+  if (specifier.startsWith('.') || specifier.startsWith('@/') || specifier.startsWith('node:')) {
+    return undefined
+  }
+
+  const segments = specifier.split('/')
+
+  return specifier.startsWith('@') ? segments.slice(0, 2).join('/') : segments[0]
+}
+
+/**
+ * npm packages a file imports without the item declaring them. Undeclared
+ * imports resolve here through the workspace and fail in the project that
+ * installs the component, which is the worst place to find out.
+ */
+export const undeclaredDependencies = (source: string, declared: readonly string[]): string[] => {
+  const known = new Set(declared)
+  const missing = new Set<string>()
+
+  for (const specifier of importSpecifiers(source)) {
+    const name = packageNameOf(specifier)
+
+    if (name !== undefined && !known.has(name) && !ASSUMED_PRESENT.has(name)) {
+      missing.add(name)
+    }
+  }
+
+  return [...missing]
+}
+
 export const toPayload = (
   item: RegistryItem,
   read: (path: string) => string,
@@ -77,6 +120,13 @@ export const toPayload = (
     if (unsupported.length > 0) {
       throw new Error(
         `File "${file.path}" imports ${unsupported.join(', ')}, which the CLI cannot rewrite.`,
+      )
+    }
+
+    const undeclared = undeclaredDependencies(content, item.dependencies ?? [])
+    if (undeclared.length > 0) {
+      throw new Error(
+        `File "${file.path}" imports ${undeclared.join(', ')}, which "${item.name}" does not declare in dependencies.`,
       )
     }
 
