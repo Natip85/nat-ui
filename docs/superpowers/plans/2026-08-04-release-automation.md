@@ -13,7 +13,9 @@ Design spec: `docs/superpowers/specs/2026-08-04-release-automation-design.md`.
 ## Global Constraints
 
 - The workflow file must be exactly `.github/workflows/publish.yml`. npm matches the OIDC token's `workflow_ref` claim against the filename registered on the trust relationship, which is already set to `publish.yml`.
-- Publishing requires npm 11. npm 10.9.2 contains zero references to the OIDC exchange endpoint; 11.5.0 has it. Install and assert npm `^11.5.0` in CI.
+- Publishing requires npm 11. npm 10.9.2 contains zero references to the OIDC exchange endpoint. npm documents 11.5.1 as the supported floor for trusted publishing, so install and assert npm `^11.5.1` in CI — the assertion needs to compare the patch, not just the minor.
+- Pass `package-manager-cache: false` to `actions/setup-node`. npm's guidance is to never cache in a release build. The input defaults to `true`, and although it only caches when `packageManager` names npm — which this repo's does not — setting it explicitly keeps the guarantee from resting on that coincidence.
+- `repository.url` in `packages/cli/package.json` must match the GitHub repository, and the repository must be public for provenance to be generated. Both hold: the URL is `git+https://github.com/Natip85/nat-ui.git` against remote `Natip85/nat-ui`, and the repository is public.
 - The published tarball must be produced by `pnpm pack`, never `npm pack`. `packages/cli/package.json` declares dev dependencies as `catalog:` and `workspace:*`; pnpm resolves them, npm leaves them verbatim.
 - Never pass `publish` to `changesets/action`. With it, the action runs `changeset publish`, which spawns `pnpm publish` in this repo, and pnpm 10.34.5 cannot perform the OIDC exchange. Without it the action logs "Not publishing because no publish script found" and returns.
 - Pin `changesets/action@v1.9.0`. There is no stable `v2`: the only v2 refs are `v2.0.0-next.0` through `v2.0.0-next.4`, and `@v2` does not resolve to anything. v1 and the unreleased v2 also differ in naming — v1 takes `version` and `createGithubReleases` and emits `hasChangesets`, where v2 renamed them to `version-script`, `create-github-releases`, and `has-changesets`. Using a v2 name against v1 fails silently rather than loudly: an unknown input is ignored, and an unknown output reads as empty, which makes the publish gate skip and nothing ever ships.
@@ -666,27 +668,33 @@ jobs:
 
       - uses: pnpm/action-setup@v6
 
-      # No dependency cache: npm's guidance is to avoid caching in release
-      # builds, and a release runs rarely enough that the cache buys nothing.
+      # `package-manager-cache: false` because npm's guidance is to never cache
+      # in a release build. Its default only caches when `packageManager` names
+      # npm, which this repo's does not, so today it changes nothing — it is set
+      # explicitly so the guarantee does not rest on that coincidence.
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
 
-      # The OIDC exchange lives in npm 11 — npm 10 has no exchange endpoint at
-      # all. Node 24 bundles npm 11 today, but that pairing is not contractual,
-      # so pin it and assert, rather than meeting a stale npm as a confusing
-      # authentication error at publish time.
+      # npm documents 11.5.1 as the floor for trusted publishing; npm 10 has no
+      # exchange endpoint at all. Node 24 bundles npm 11 today, but that pairing
+      # is not contractual, so pin it and assert — a stale npm otherwise arrives
+      # as an opaque ENEEDAUTH at publish time. Asserting the *running* npm, not
+      # just the installed one, is what catches an install that PATH ignored.
       - name: Install and verify npm 11
         run: |
-          npm install --global npm@^11.5.0
+          npm install --global npm@^11.5.1
           installed="$(npm --version)"
           echo "npm $installed"
           INSTALLED="$installed" node -e '
             const version = process.env.INSTALLED ?? ""
-            const [major, minor] = version.split(".").map(Number)
-            if (!(major > 11 || (major === 11 && minor >= 5))) {
-              console.error(`npm ${version} cannot perform the OIDC token exchange; 11.5.0 or newer is required.`)
+            const [major = 0, minor = 0, patch = 0] = version.split(".").map(Number)
+            const satisfied =
+              major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)))
+            if (!satisfied) {
+              console.error(`npm ${version} cannot perform the OIDC token exchange; 11.5.1 or newer is required.`)
               process.exit(1)
             }
           '

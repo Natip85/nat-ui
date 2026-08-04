@@ -34,27 +34,33 @@ jobs:
 
       - uses: pnpm/action-setup@v6
 
-      # No dependency cache: npm's guidance is to avoid caching in release
-      # builds, and a release runs rarely enough that the cache buys nothing.
+      # `package-manager-cache: false` because npm's guidance is to never cache
+      # in a release build. Its default only caches when `packageManager` names
+      # npm, which this repo's does not, so today it changes nothing — it is set
+      # explicitly so the guarantee does not rest on that coincidence.
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
 
-      # The OIDC exchange lives in npm 11 — npm 10 has no exchange endpoint at
-      # all. Node 24 bundles npm 11 today, but that pairing is not contractual,
-      # so pin it and assert, rather than meeting a stale npm as a confusing
-      # authentication error at publish time.
+      # npm documents 11.5.1 as the floor for trusted publishing; npm 10 has no
+      # exchange endpoint at all. Node 24 bundles npm 11 today, but that pairing
+      # is not contractual, so pin it and assert — a stale npm otherwise arrives
+      # as an opaque ENEEDAUTH at publish time. Asserting the *running* npm, not
+      # just the installed one, is what catches an install that PATH ignored.
       - name: Install and verify npm 11
         run: |
-          npm install --global npm@^11.5.0
+          npm install --global npm@^11.5.1
           installed="$(npm --version)"
           echo "npm $installed"
           INSTALLED="$installed" node -e '
             const version = process.env.INSTALLED ?? ""
-            const [major, minor] = version.split(".").map(Number)
-            if (!(major > 11 || (major === 11 && minor >= 5))) {
-              console.error(`npm ${version} cannot perform the OIDC token exchange; 11.5.0 or newer is required.`)
+            const [major = 0, minor = 0, patch = 0] = version.split(".").map(Number)
+            const satisfied =
+              major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1)))
+            if (!satisfied) {
+              console.error(`npm ${version} cannot perform the OIDC token exchange; 11.5.1 or newer is required.`)
               process.exit(1)
             }
           '

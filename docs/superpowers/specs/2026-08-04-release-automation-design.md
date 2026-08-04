@@ -132,7 +132,7 @@ Steps, in order:
 2. Install npm 11 explicitly and assert the version. Node 24 bundles npm 11
    today, but the bundled version is not contractual, and npm 10 has no OIDC
    support whatsoever — npm 10.9.2 contains zero references to the exchange
-   endpoint, while 11.5.0 has it. Asserting turns a silently stale npm into a
+   endpoint, and npm documents 11.5.1 as the floor for trusted publishing. Asserting turns a silently stale npm into a
    clear failure instead of a misleading authentication error.
 3. `changesets/action`, given a `version` script and no publish script.
 4. Decide whether to publish (below).
