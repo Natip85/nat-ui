@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "description": "Zod schemas and types for nat-ui registry items and project config.",
   "type": "module",
+  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,9 +21,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsup",
