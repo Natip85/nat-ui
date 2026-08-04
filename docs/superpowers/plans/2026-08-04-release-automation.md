@@ -1046,7 +1046,10 @@ tarball that actually gets published and fails on any unresolved specifier.
   which is expected: GitHub does not trigger workflows for events created with
   the default `GITHUB_TOKEN`, and we deliberately did not add a PAT to work
   around it.
-- `pnpm release` no longer publishes; it fails with a pointer to the workflow.
+- `pnpm release` now refuses by default and points at the workflow. It stays
+  reachable behind `NAT_UI_ALLOW_LOCAL_RELEASE=1` so that a broken workflow or a
+  revoked trust relationship cannot leave the package unshippable, and it warns
+  that a version published that way has no provenance.
 
 ## Test plan
 
