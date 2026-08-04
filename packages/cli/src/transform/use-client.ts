@@ -1,5 +1,5 @@
 /** Anchored, so only a directive in the position React honours is removed. */
-const DIRECTIVE = /^\s*(['"])use client\1\s*;?[ \t]*\r?\n(?:\r?\n)?/
+const DIRECTIVE = /^\s*(['"])use client\1\s*;?[ \t]*(?:\r?\n|$)(?:\r?\n)?/
 
 /**
  * The directive is meaningful only where server components exist. Left in a

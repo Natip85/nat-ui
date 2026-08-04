@@ -4,20 +4,26 @@ export interface RewriteAliases {
 }
 
 /**
- * Only specifiers introduced by `from` or a bare `import` are matched, so a
- * string in the body that happens to look like a module path is left alone.
+ * Matching is keyword-driven: `\bfrom` and `\bimport` reach commented-out
+ * imports and example imports in doc comments, not only live statements.
+ * Ordinary string literals are left alone. Comment rewriting is tolerated
+ * deliberately — only comment text changes, and rewriting an example to the
+ * project's alias is more useful than leaving `@/`; avoiding it would require
+ * tokenizing the source.
  */
 const SPECIFIER = /(\bfrom\s*|\bimport\s*)(['"])(@\/[^'"]*)\2/g
 
 const UI_PREFIX = '@/components/ui/'
 
+const stripTrailingSlashes = (path: string): string => path.replace(/\/+$/, '')
+
 const joinUiAlias = (ui: string, rest: string): string => {
-  const base = ui.endsWith('/') ? ui.slice(0, -1) : ui
+  const base = stripTrailingSlashes(ui)
   return `${base}/${rest}`
 }
 
 const rewriteSpecifier = (specifier: string, aliases: RewriteAliases): string | undefined => {
-  if (specifier === '@/lib/utils') return aliases.utils
+  if (specifier === '@/lib/utils') return stripTrailingSlashes(aliases.utils)
   if (specifier.startsWith(UI_PREFIX))
     return joinUiAlias(aliases.ui, specifier.slice(UI_PREFIX.length))
 

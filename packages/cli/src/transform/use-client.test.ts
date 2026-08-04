@@ -28,4 +28,14 @@ describe('applyClientDirective', () => {
 
     expect(applyClientDirective(source, false)).toBe(source)
   })
+
+  test('removes a directive-only file with no trailing newline', () => {
+    expect(applyClientDirective("'use client'", false)).toBe('')
+  })
+
+  test('removes leading blank lines along with the directive', () => {
+    const source = "\n\n'use client'\n\nimport {a} from 'b'\n"
+
+    expect(applyClientDirective(source, false)).toBe("import {a} from 'b'\n")
+  })
 })

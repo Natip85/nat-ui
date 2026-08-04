@@ -102,4 +102,28 @@ describe('rewriteImports', () => {
       "import {buttonVariants} from '~/ui/button'\n",
     )
   })
+
+  test('normalizes multiple trailing slashes on the ui alias', () => {
+    const source = "import {buttonVariants} from '@/components/ui/button'\n"
+    const multiSlashAliases = {ui: '~/ui///', utils: '~/helpers/cn'}
+
+    expect(rewriteImports(source, multiSlashAliases)).toBe(
+      "import {buttonVariants} from '~/ui/button'\n",
+    )
+  })
+
+  test('normalizes a trailing slash on the utils alias', () => {
+    const source = "import {cn} from '@/lib/utils'\n"
+    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn/'}
+
+    expect(rewriteImports(source, trailingSlashAliases)).toBe("import {cn} from '~/helpers/cn'\n")
+  })
+
+  test('deliberately rewrites import-shaped text inside comments', () => {
+    const source = "// import x from '@/lib/utils'\nimport {cn} from '@/lib/utils'\n"
+
+    expect(rewriteImports(source, aliases)).toBe(
+      "// import x from '~/helpers/cn'\nimport {cn} from '~/helpers/cn'\n",
+    )
+  })
 })
