@@ -62,6 +62,16 @@ describe('unsupportedAliasImports', () => {
 
     expect(unsupportedAliasImports(source)).toEqual(['@/hooks/use-thing'])
   })
+
+  test('reports every dynamic alias import because the CLI only rewrites static imports', () => {
+    const source = [
+      "import('@/hooks/use-thing')",
+      "import('@/lib/utils')",
+      "import('lucide-react')",
+    ].join('\n')
+
+    expect(unsupportedAliasImports(source)).toEqual(['@/hooks/use-thing', '@/lib/utils'])
+  })
 })
 
 describe('toPayload', () => {
@@ -101,11 +111,11 @@ describe('toIndex', () => {
   test('lists every item sorted by name', () => {
     const index = toIndex([
       {...button, name: 'input'},
-      {...button, name: 'button'},
-      {...button, name: 'dialog'},
+      {...button, name: 'aa'},
+      {...button, name: 'a-b'},
     ])
 
-    expect(index.items.map((entry) => entry.name)).toEqual(['button', 'dialog', 'input'])
+    expect(index.items.map((entry) => entry.name)).toEqual(['a-b', 'aa', 'input'])
     expect(index.schemaVersion).toBe('1')
   })
 })

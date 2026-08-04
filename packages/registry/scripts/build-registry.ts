@@ -31,11 +31,24 @@ export const importSpecifiers = (source: string): string[] => {
 
 /** The two shapes `add` knows how to rewrite. Anything else would ship broken. */
 const SUPPORTED_ALIAS = /^@\/(?:lib\/utils|components\/ui\/[a-z0-9-]+)$/
+const DYNAMIC_SPECIFIER = /\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g
 
-export const unsupportedAliasImports = (source: string): string[] =>
-  importSpecifiers(source).filter(
+const dynamicAliasImports = (source: string): string[] => {
+  const found: string[] = []
+  for (const match of source.matchAll(DYNAMIC_SPECIFIER)) {
+    const value = match[1]
+    if (value?.startsWith('@/')) found.push(value)
+  }
+
+  return found
+}
+
+export const unsupportedAliasImports = (source: string): string[] => [
+  ...importSpecifiers(source).filter(
     (specifier) => specifier.startsWith('@/') && !SUPPORTED_ALIAS.test(specifier),
-  )
+  ),
+  ...dynamicAliasImports(source),
+]
 
 export const toPayload = (
   item: RegistryItem,
@@ -53,6 +66,13 @@ export const toPayload = (
     }
 
     const content = normalizeNewlines(read(file.path))
+    const dynamic = dynamicAliasImports(content)
+    if (dynamic.length > 0) {
+      throw new Error(
+        `File "${file.path}" dynamically imports ${dynamic.join(', ')}, but the CLI cannot rewrite dynamic imports.`,
+      )
+    }
+
     const unsupported = unsupportedAliasImports(content)
     if (unsupported.length > 0) {
       throw new Error(
