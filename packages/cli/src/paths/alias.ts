@@ -2,14 +2,14 @@ import {isAbsolute, join, relative, sep} from 'node:path'
 import {type AliasMapping, targetDirForPrefix} from '../detect/project'
 
 /**
- * Judged purely on the path given -- never on where it resolves on disk -- so a
+ * Judged purely on the path given — never on where it resolves on disk — so a
  * stylesheet that is itself a symlink pointing outside the project (a real
  * monorepo pattern) is still accepted. Only a path that already reads outside
  * the project root, like `../../elsewhere.css`, is refused.
  *
  * Checks for a leading `..` *segment* rather than just the characters `..`, so a
- * legitimately in-root name that merely starts with two dots -- `..styles/globals.css`,
- * naming a real directory called `..styles` -- is not mistaken for an escape.
+ * legitimately in-root name that merely starts with two dots — `..styles/globals.css`,
+ * naming a real directory called `..styles` — is not mistaken for an escape.
  */
 export const isWithinRoot = (root: string, target: string): boolean => {
   const rel = relative(root, target)
@@ -17,14 +17,14 @@ export const isWithinRoot = (root: string, target: string): boolean => {
   return !isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)
 }
 
-/** `@/components/ui` -> `@`. */
+/** `@/components/ui` → `@`. */
 export const aliasPrefixOf = (alias: string): string => {
   const slash = alias.indexOf('/')
 
   return slash === -1 ? alias : alias.slice(0, slash)
 }
 
-/** `@/components/ui` with prefix `@` and a paths target rooted at `src` -> `src/components/ui`. */
+/** `@/components/ui` with prefix `@` and a paths target rooted at `src` → `src/components/ui`. */
 export const aliasToPath = (alias: string, prefix: string, baseDir: string): string => {
   const withoutPrefix = alias.startsWith(`${prefix}/`) ? alias.slice(prefix.length + 1) : alias
 
