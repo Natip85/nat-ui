@@ -1,6 +1,9 @@
 import {HomeLayout} from 'fumadocs-ui/layouts/home'
+import type {Metadata} from 'next'
 import Link from 'next/link'
 import {baseOptions, homeSlots} from '@/lib/layout.shared'
+
+export const metadata: Metadata = {title: 'Page not found'}
 
 /**
  * The navigation bar is global, and a 404 is the page a lost reader is most

@@ -3,6 +3,16 @@ export const cliPackage = '@nat-ui/cli'
 export const docsRoute = '/docs'
 export const componentsRoute = '/components'
 
+export const siteDescription = 'Copy-paste components, own the code.'
+
+/**
+ * What relative URLs in page metadata are resolved against. There is no custom
+ * domain yet, so this is the default production URL Vercel gives the project;
+ * replace the string with the domain once one exists and every absolute URL the
+ * site advertises follows.
+ */
+export const siteUrl = 'https://nat-ui.vercel.app'
+
 export const gitConfig = {
   user: 'Natip85',
   repo: 'nat-ui',

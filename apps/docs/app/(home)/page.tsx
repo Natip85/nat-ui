@@ -1,4 +1,11 @@
+import type {Metadata} from 'next'
 import Link from 'next/link'
+import {appName, siteDescription} from '@/lib/shared'
+
+// `absolute` so the landing page is not titled "nat-ui · nat-ui".
+export const metadata: Metadata = {
+  title: {absolute: `${appName} — ${siteDescription}`},
+}
 
 export default function HomePage() {
   return (
