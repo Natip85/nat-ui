@@ -182,7 +182,7 @@ const main = async (): Promise<void> => {
 
   const payloads = [...items].sort(byName).map((item) => toPayload(item, read))
   const documents = new Map<string, string>([
-    ...payloads.map((payload) => [`${payload.name}.json`, serialize(payload)]),
+    ...payloads.map((payload): [string, string] => [`${payload.name}.json`, serialize(payload)]),
     ['index.json', serialize(toIndex(items))],
   ])
 
