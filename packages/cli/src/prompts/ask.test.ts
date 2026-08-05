@@ -32,4 +32,10 @@ describe('defaultAnswers', () => {
   test('fails loudly when no stylesheet was detected, rather than guessing', () => {
     expect(() => defaultAnswers({...detected, css: undefined})).toThrow(/stylesheet/i)
   })
+
+  test('offers the missing-Tailwind reading, not just the wrong-path one', () => {
+    // A project that never installed Tailwind reaches this too, and telling it
+    // to point at a stylesheet it does not have sends the reader in circles.
+    expect(() => defaultAnswers({...detected, css: undefined})).toThrow(/set it up first/i)
+  })
 })

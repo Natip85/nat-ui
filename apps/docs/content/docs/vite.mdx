@@ -1,14 +1,45 @@
 ---
 title: Vite
-description: Point the @ alias at your source directory so components resolve.
+description: Set up the two things create-vite leaves out — Tailwind and the @ alias.
 ---
 
-`create-vite` sets up no import alias, so a fresh Vite project has no idea what
-`@/` means. Next.js projects come with one already, which is why this page is
-only about Vite.
+A fresh Vite project has neither of the two things `nat-ui` needs: Tailwind, and
+an import alias. Next.js projects arrive with both, which is why this page is
+only about Vite. Neither is something the CLI will set up for you, so do both
+before running `init`.
 
-Skip it and `add` writes perfectly good files that do not compile, with the
-first error coming from a file you did not write:
+## Install Tailwind
+
+`nat-ui` styles its components with Tailwind, and `init` writes theme variables
+into a stylesheet that imports it. Without one it stops rather than guessing,
+so this comes first.
+
+<InstallCommand packages='tailwindcss @tailwindcss/vite' />
+
+Add the plugin to your Vite config:
+
+```ts title="vite.config.ts"
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
+import {defineConfig} from 'vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+Then replace the contents of `src/index.css`, which `create-vite` fills with
+starter styles, with the import:
+
+```css title="src/index.css"
+@import 'tailwindcss';
+```
+
+## Add the alias
+
+`create-vite` configures no import alias, so a fresh project has no idea what
+`@/` means. Skip this and `add` writes perfectly good files that do not compile,
+with the first error coming from a file you did not write:
 
 ```text
 src/App.tsx(1,22): error TS2307: Cannot find module '@/components/ui/button'
@@ -18,8 +49,6 @@ src/components/ui/button.tsx(4,18): error TS2307: Cannot find module '@/lib/util
 `init` warns when it sees this, but it will not edit your TypeScript config for
 you — which config compiles your application is a guess from the outside, and
 guessing wrong writes to a file that changes nothing.
-
-## Add the alias
 
 The config that compiles your application is `tsconfig.app.json`. Add `paths`
 inside its `compilerOptions`:
@@ -57,22 +86,6 @@ That is the whole change. Vite resolves TypeScript's `paths` itself, so no
   its config loader. A relative `paths` target resolves against the file it is written in, so
   `baseUrl` has nothing left to do.
 </Callout>
-
-## Tailwind has to be there first
-
-`init` looks for a stylesheet that imports `tailwindcss` and stops if it cannot
-find one, so set Tailwind up before running it. For Vite that means the
-`@tailwindcss/vite` plugin and an `@import 'tailwindcss'` in `src/index.css`.
-
-```ts title="vite.config.ts"
-import tailwindcss from '@tailwindcss/vite'
-import react from '@vitejs/plugin-react'
-import {defineConfig} from 'vite'
-
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-})
-```
 
 ## Then run init
 

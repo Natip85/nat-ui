@@ -11,11 +11,16 @@ const FIRST_PRESET = PRESET_CHOICES[0]
 /**
  * Used by --yes and whenever stdin is not a TTY. The stylesheet is the one value
  * with no conventional fallback, so it throws instead of inventing a path.
+ *
+ * Two different situations reach this, and the message has to serve both: a
+ * project with Tailwind in a place the search does not cover, and — more often,
+ * because `create-vite` ships neither — a project with no Tailwind at all.
+ * Offering only "point at your stylesheet" is useless advice to the second.
  */
 export const defaultAnswers = (detected: DetectedProject): InitAnswers => {
   if (detected.css === undefined) {
     throw new Error(
-      'Could not find a stylesheet importing tailwindcss. Run without --yes to supply one.',
+      'Could not find a stylesheet importing tailwindcss. nat-ui styles components with Tailwind, so set it up first if this project has none. If it has one somewhere unconventional, run without --yes to point at it.',
     )
   }
   if (FIRST_PRESET === undefined) throw new Error('No theme presets are defined.')
