@@ -1,4 +1,5 @@
 export const appName = 'nat-ui'
+export const cliPackage = '@nat-ui/cli'
 export const docsRoute = '/docs'
 export const componentsRoute = '/components'
 

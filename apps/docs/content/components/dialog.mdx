@@ -1,0 +1,60 @@
+---
+title: Dialog
+description: A modal overlay that interrupts to ask for something.
+---
+
+<ComponentPreview name='dialog-demo' />
+
+## Installation
+
+<ComponentInstallation item='dialog' />
+
+Installing the dialog also writes `button`, because its close control is styled
+with `buttonVariants`. Naming a component installs whatever it depends on, which
+is why the manual steps above list both files.
+
+## Usage
+
+```tsx
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+```
+
+`DialogTrigger` and `DialogClose` are Base UI's own `Dialog.Trigger` and
+`Dialog.Close`, re-exported unchanged, so they take Base UI's `render` prop.
+Pass a `Button` to it rather than nesting one inside them:
+
+```tsx
+<DialogTrigger render={<Button variant='outline'>Open dialog</Button>} />
+```
+
+## Without a close button
+
+`DialogContent` takes `showCloseButton`, defaulting to `true`, which renders a
+ghost icon button in the top-right corner. Turn it off when the footer should be
+the only way out.
+
+<ComponentPreview name='dialog-no-close-button' />
+
+## API Reference
+
+| Export              | Purpose                                                        |
+| ------------------- | -------------------------------------------------------------- |
+| `Dialog`            | Root. Holds open state.                                        |
+| `DialogTrigger`     | Opens the dialog.                                              |
+| `DialogContent`     | Portal, overlay, viewport, and panel in one element.           |
+| `DialogHeader`      | Groups the title and description.                              |
+| `DialogTitle`       | Accessible name. Include one.                                  |
+| `DialogDescription` | Supporting text, wired to the dialog's accessible description. |
+| `DialogFooter`      | Groups the actions.                                            |
+| `DialogClose`       | Closes the dialog.                                             |
+| `DialogOverlay`     | The backdrop. `DialogContent` renders it for you.              |
+| `DialogPortal`      | Escape hatch. `DialogContent` renders it for you.              |

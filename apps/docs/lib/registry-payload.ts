@@ -14,3 +14,27 @@ export const readPayload = async (name: string): Promise<RegistryItemPayload> =>
 
   return registryItemPayloadSchema.parse(JSON.parse(raw))
 }
+
+/**
+ * Every item `add <name>` would write, dependencies first, each appearing once.
+ * Naming a component installs whatever it depends on, so the manual
+ * instructions have to account for the same files the CLI would.
+ */
+export const resolvePayloads = async (name: string): Promise<RegistryItemPayload[]> => {
+  const seen = new Set<string>()
+  const resolved: RegistryItemPayload[] = []
+
+  const visit = async (current: string): Promise<void> => {
+    if (seen.has(current)) return
+    seen.add(current)
+
+    const payload = await readPayload(current)
+    for (const dependency of payload.registryDependencies ?? []) await visit(dependency)
+
+    resolved.push(payload)
+  }
+
+  await visit(name)
+
+  return resolved
+}
