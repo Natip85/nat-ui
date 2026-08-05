@@ -125,6 +125,9 @@ importers:
       '@eslint/js':
         specifier: 'catalog:'
         version: 10.0.1(eslint@10.8.0(jiti@2.7.0))
+      '@nat-ui/schema':
+        specifier: workspace:*
+        version: link:packages/schema
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.1
