@@ -80,12 +80,13 @@ Add this entry to the \`demos\` map in apps/docs/components/demos/registry.ts:
 
   '${name}-demo': {component: ${componentName}Demo, file: '${name}-demo.tsx'},
 
-Add this to the \`items\` array in packages/registry/src/index.ts:
+Add this to the \`items\` array in packages/registry/src/index.ts, listing in
+\`dependencies\` any npm package the component ends up importing:
 
   {
     name: '${name}',
     type: 'ui',
-    dependencies: ['@base-ui/react'],
+    dependencies: [],
     files: [{path: 'components/ui/${name}.tsx', type: 'ui'}],
   },
 

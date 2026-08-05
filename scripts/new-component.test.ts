@@ -59,4 +59,21 @@ describe('manualInstructions', () => {
       "import {CheckboxDemo} from './checkbox-demo'\n\nAdd this entry to the `demos` map in apps/docs/components/demos/registry.ts:\n\n  'checkbox-demo': {component: CheckboxDemo, file: 'checkbox-demo.tsx'},",
     )
   })
+
+  it('declares no dependency the generated component does not import', () => {
+    // Following these instructions verbatim used to install `@base-ui/react` for
+    // a component that imports only react and the utils alias. The build's
+    // dependency guard is one-directional -- it catches an undeclared import,
+    // not a declaration nothing imports -- so the two halves are pinned here
+    // together: change what the template imports and this fails until the
+    // printed entry says so.
+    const [component] = componentFiles('checkbox')
+    const imported = [...(component?.content ?? '').matchAll(/from '([^']+)'/g)].map(
+      (match) => match[1],
+    )
+    const declared = /dependencies: \[(.*)\]/.exec(manualInstructions('checkbox'))?.[1]
+
+    expect(imported, 'what the generated component imports').toEqual(['react', '@/lib/utils'])
+    expect(declared, 'what the printed items entry declares').toBe('')
+  })
 })
