@@ -33,6 +33,7 @@
     "globals": "catalog:",
     "jiti": "catalog:",
     "prettier": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"

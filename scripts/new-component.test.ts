@@ -22,22 +22,30 @@ describe('componentFiles', () => {
     ])
   })
 
-  it('names the component in its page frontmatter', () => {
+  it('generates the complete component page structure', () => {
     const page = componentFiles('checkbox').find((file) => file.path.endsWith('.mdx'))
 
-    expect(page?.content).toContain('title: Checkbox')
-  })
+    expect(page?.content).toBe(`---
+title: Checkbox
+description: TODO
+---
 
-  it('wires the page preview to the demo it generates', () => {
-    const page = componentFiles('checkbox').find((file) => file.path.endsWith('.mdx'))
+<ComponentPreview name='checkbox-demo' />
 
-    expect(page?.content).toContain("<ComponentPreview name='checkbox-demo' />")
-  })
+## Installation
 
-  it('uses the built-registry installation component', () => {
-    const page = componentFiles('checkbox').find((file) => file.path.endsWith('.mdx'))
+<ComponentInstallation item='checkbox' />
 
-    expect(page?.content).toContain("<ComponentInstallation item='checkbox' />")
+## Usage
+
+\`\`\`tsx
+import {Checkbox} from '@/components/ui/checkbox'
+\`\`\`
+
+## API Reference
+
+TODO
+`)
   })
 
   it('rejects a name the registry schema would refuse', () => {
