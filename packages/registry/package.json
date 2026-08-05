@@ -8,22 +8,27 @@
     "build": "tsx scripts/build-registry.ts",
     "typecheck": "tsc --noEmit"
   },
+  "exports": {
+    "./registry": "./src/index.ts",
+    "./components/ui/*": "./src/components/ui/*.tsx",
+    "./lib/utils": "./src/lib/utils.ts"
+  },
   "dependencies": {
-    "@nat-ui/schema": "workspace:*"
+    "@base-ui/react": "catalog:",
+    "@nat-ui/schema": "workspace:*",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
+    "tailwind-merge": "catalog:"
   },
   "devDependencies": {
-    "@base-ui/react": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "class-variance-authority": "catalog:",
-    "clsx": "catalog:",
     "happy-dom": "catalog:",
-    "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tailwind-merge": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

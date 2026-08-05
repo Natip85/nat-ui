@@ -19,6 +19,12 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
+      "@/lib/utils": [
+        "../../packages/registry/src/lib/utils.ts"
+      ],
+      "@/components/ui/*": [
+        "../../packages/registry/src/components/ui/*.tsx"
+      ],
       "@/*": [
         "./*"
       ]
