@@ -4,6 +4,7 @@ import {
   byName,
   importSpecifiers,
   normalizeNewlines,
+  outputDirectories,
   packageNameOf,
   serialize,
   toIndex,
@@ -137,6 +138,15 @@ describe('byName', () => {
 describe('serialize', () => {
   test('writes two-space JSON with a trailing newline', () => {
     expect(serialize({a: 1})).toBe('{\n  "a": 1\n}\n')
+  })
+})
+
+describe('outputDirectories', () => {
+  it('writes the committed copy and the copy the site serves', () => {
+    expect(outputDirectories('/repo/packages/registry')).toEqual([
+      '/repo/r',
+      '/repo/apps/docs/public/r',
+    ])
   })
 })
 

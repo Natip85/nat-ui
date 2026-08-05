@@ -151,11 +151,20 @@ export const toIndex = (all: readonly RegistryItem[]): RegistryIndex =>
 
 export const serialize = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`
 
+/**
+ * Two destinations, one serialisation. `r/` is committed and served by GitHub
+ * raw for clients that shipped before the site existed; the copy under the
+ * docs app is generated at deploy time and served from the domain.
+ */
+export const outputDirectories = (packageRoot: string): string[] => [
+  join(packageRoot, '..', '..', 'r'),
+  join(packageRoot, '..', '..', 'apps', 'docs', 'public', 'r'),
+]
+
 const main = async (): Promise<void> => {
   const here = dirname(fileURLToPath(import.meta.url))
   const packageRoot = join(here, '..')
   const sourceRoot = join(packageRoot, 'src')
-  const outputDir = join(packageRoot, '..', '..', 'r')
 
   const contents = new Map<string, string>()
   for (const item of items) {
@@ -175,13 +184,15 @@ const main = async (): Promise<void> => {
 
   // Removed rather than overwritten, so deleting an item also deletes its
   // document instead of leaving a file nothing points at.
-  await rm(outputDir, {recursive: true, force: true})
-  await mkdir(outputDir, {recursive: true})
+  for (const outputDir of outputDirectories(packageRoot)) {
+    await rm(outputDir, {recursive: true, force: true})
+    await mkdir(outputDir, {recursive: true})
 
-  for (const payload of payloads) {
-    await writeFile(join(outputDir, `${payload.name}.json`), serialize(payload))
+    for (const payload of payloads) {
+      await writeFile(join(outputDir, `${payload.name}.json`), serialize(payload))
+    }
+    await writeFile(join(outputDir, 'index.json'), serialize(toIndex(items)))
   }
-  await writeFile(join(outputDir, 'index.json'), serialize(toIndex(items)))
 
   console.log(`Wrote ${String(payloads.length)} registry item(s) to r/.`)
 }
