@@ -11,7 +11,7 @@ export const siteDescription = 'Copy-paste components, own the code.'
  * replace the string with the domain once one exists and every absolute URL the
  * site advertises follows.
  */
-export const siteUrl = 'https://nat-ui.vercel.app'
+export const siteUrl = 'https://nat-ui-delta.vercel.app'
 
 export const gitConfig = {
   user: 'Natip85',
