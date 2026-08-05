@@ -1,6 +1,13 @@
 import {describe, expect, test} from 'vitest'
 import {DEFAULT_REGISTRY_URL, resolveBaseUrl} from './base-url'
 
+// The other tests here compare against the constant, so they would follow it
+// anywhere. Publishing bakes this string into a bundle that older installs keep
+// fetching from forever, so pin the literal and make changing it deliberate.
+test('DEFAULT_REGISTRY_URL points at the documentation site', () => {
+  expect(DEFAULT_REGISTRY_URL).toBe('https://nat-ui-delta.vercel.app/r')
+})
+
 describe('resolveBaseUrl', () => {
   test('falls back to the built-in default', () => {
     expect(resolveBaseUrl(undefined, {})).toBe(DEFAULT_REGISTRY_URL)

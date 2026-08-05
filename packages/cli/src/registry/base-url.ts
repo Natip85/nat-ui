@@ -1,9 +1,13 @@
 /**
- * Served straight from the repository so the registry needs no infrastructure.
- * The documentation site can take this over later by changing this default, or
- * anyone can point elsewhere with `--registry`, without a change to `add`.
+ * The documentation site, which serves the same `r/` the repository commits.
+ *
+ * Every published CLI bakes this value into its bundle, so whatever it names has
+ * to keep answering for as long as that version is installable. Renaming or
+ * deleting the Vercel project strands them, because nothing redirects from the
+ * old subdomain; pointing the project at a custom domain later is safe, since
+ * `fetch` follows redirects. Anyone can point elsewhere with `--registry`.
  */
-export const DEFAULT_REGISTRY_URL = 'https://raw.githubusercontent.com/Natip85/nat-ui/main/r'
+export const DEFAULT_REGISTRY_URL = 'https://nat-ui-delta.vercel.app/r'
 
 const trimmed = (value: string | undefined): string | undefined => {
   const next = value?.trim()
