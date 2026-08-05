@@ -2,11 +2,14 @@ import {join} from 'node:path'
 import type {RegistryItem} from '@nat-ui/schema'
 import {describe, expect, it, test} from 'vitest'
 import {
+  assertResolvableGraph,
   byName,
+  danglingRegistryDependencies,
   importSpecifiers,
   normalizeNewlines,
   outputDirectories,
   packageNameOf,
+  registryDependencyCycles,
   serialize,
   toIndex,
   toPayload,
@@ -237,6 +240,84 @@ describe('undeclaredDependencies', () => {
     const source = "import('@/lib/utils')\n"
 
     expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+})
+
+const ui = (name: string, registryDependencies?: string[]): RegistryItem => ({
+  name,
+  type: 'ui',
+  ...(registryDependencies === undefined ? {} : {registryDependencies}),
+  files: [{path: `components/ui/${name}.tsx`, type: 'ui'}],
+})
+
+describe('danglingRegistryDependencies', () => {
+  it('accepts a dependency the registry defines', () => {
+    expect(danglingRegistryDependencies([ui('dialog', ['button']), ui('button')])).toEqual([])
+  })
+
+  it('reports a dependency nothing defines', () => {
+    expect(danglingRegistryDependencies([ui('dialog', ['buton']), ui('button')])).toEqual([
+      'dialog -> buton',
+    ])
+  })
+
+  it('reports every offending pair', () => {
+    expect(danglingRegistryDependencies([ui('a', ['x']), ui('b', ['y'])])).toEqual([
+      'a -> x',
+      'b -> y',
+    ])
+  })
+})
+
+describe('registryDependencyCycles', () => {
+  it('accepts an acyclic graph', () => {
+    expect(registryDependencyCycles([ui('dialog', ['button']), ui('button')])).toEqual([])
+  })
+
+  it('accepts a diamond, where a shared dependency is reached twice', () => {
+    const all = [ui('a', ['b', 'c']), ui('b', ['d']), ui('c', ['d']), ui('d')]
+
+    expect(registryDependencyCycles(all)).toEqual([])
+  })
+
+  it('reports a two-item cycle', () => {
+    expect(registryDependencyCycles([ui('a', ['b']), ui('b', ['a'])])).toEqual(['a -> b -> a'])
+  })
+
+  it('reports an item depending on itself', () => {
+    expect(registryDependencyCycles([ui('a', ['a'])])).toEqual(['a -> a'])
+  })
+
+  it('reports a longer cycle once, whichever item the walk starts from', () => {
+    const all = [ui('b', ['c']), ui('c', ['a']), ui('a', ['b'])]
+
+    expect(registryDependencyCycles(all)).toEqual(['a -> b -> c -> a'])
+  })
+
+  it('finds a cycle that no listed item leads into', () => {
+    const all = [ui('entry', ['a']), ui('a', ['b']), ui('b', ['a'])]
+
+    expect(registryDependencyCycles(all)).toEqual(['a -> b -> a'])
+  })
+})
+
+describe('assertResolvableGraph', () => {
+  it('accepts the graph the registry actually ships', () => {
+    expect(() => {
+      assertResolvableGraph([ui('dialog', ['button']), ui('button'), ui('input')])
+    }).not.toThrow()
+  })
+
+  it('names the item and the dependency it cannot resolve', () => {
+    expect(() => {
+      assertResolvableGraph([ui('dialog', ['buton'])])
+    }).toThrow(/dialog -> buton/)
+  })
+
+  it('refuses a cycle', () => {
+    expect(() => {
+      assertResolvableGraph([ui('a', ['b']), ui('b', ['a'])])
+    }).toThrow(/cycle: a -> b -> a/)
   })
 })
 

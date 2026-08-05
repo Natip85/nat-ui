@@ -139,6 +139,84 @@ export const toPayload = (
   return registryItemPayloadSchema.parse({schemaVersion: REGISTRY_SCHEMA_VERSION, ...item, files})
 }
 
+/**
+ * Names in `registryDependencies` that no item defines. `registryDependencies`
+ * is a list of strings the schema cannot cross-check, and `add` resolves each
+ * one by fetching its own document, so a typo here is a 404 in someone else's
+ * project rather than an error in ours.
+ */
+export const danglingRegistryDependencies = (all: readonly RegistryItem[]): string[] => {
+  const defined = new Set(all.map((item) => item.name))
+  const dangling = new Set<string>()
+
+  for (const item of all) {
+    for (const dependency of item.registryDependencies ?? []) {
+      if (!defined.has(dependency)) dangling.add(`${item.name} -> ${dependency}`)
+    }
+  }
+
+  return [...dangling].sort()
+}
+
+/**
+ * Rotated to start at the alphabetically first name and closed by repeating it,
+ * so the same cycle reads the same however the walk happened to enter it.
+ */
+const cycleTrail = (nodes: readonly string[]): string => {
+  const first = nodes.reduce((lowest, node) => (node < lowest ? node : lowest))
+  const at = nodes.indexOf(first)
+
+  return [...nodes.slice(at), ...nodes.slice(0, at), first].join(' -> ')
+}
+
+/**
+ * Dependency trails that return to where they started. The CLI's `resolveItems`
+ * refuses a cyclic graph outright, so shipping one would make `add` fail for
+ * every item on the cycle -- and nothing else would have noticed until then.
+ */
+export const registryDependencyCycles = (all: readonly RegistryItem[]): string[] => {
+  const byNameIndex = new Map(all.map((item) => [item.name, item] as const))
+  const cycles = new Set<string>()
+  const walked = new Set<string>()
+
+  const walk = (name: string, trail: readonly string[]): void => {
+    const at = trail.indexOf(name)
+    if (at !== -1) {
+      cycles.add(cycleTrail(trail.slice(at)))
+
+      return
+    }
+    if (walked.has(name)) return
+
+    walked.add(name)
+    // A name nothing defines is reported by danglingRegistryDependencies; it
+    // cannot be part of a cycle, since it has no dependencies of its own.
+    const item = byNameIndex.get(name)
+    if (item === undefined) return
+
+    for (const dependency of item.registryDependencies ?? []) walk(dependency, [...trail, name])
+  }
+
+  for (const item of all) walk(item.name, [])
+
+  return [...cycles].sort()
+}
+
+/** Both graph checks, as the build wants them: fail before anything is written. */
+export const assertResolvableGraph = (all: readonly RegistryItem[]): void => {
+  const dangling = danglingRegistryDependencies(all)
+  if (dangling.length > 0) {
+    throw new Error(
+      `These registryDependencies name items the registry does not define: ${dangling.join(', ')}.`,
+    )
+  }
+
+  const cycles = registryDependencyCycles(all)
+  if (cycles.length > 0) {
+    throw new Error(`Registry items form a cycle: ${cycles.join(', ')}.`)
+  }
+}
+
 // Sorted by code unit rather than locale, so the order cannot vary by machine.
 export const byName = (a: {name: string}, b: {name: string}): number =>
   a.name < b.name ? -1 : a.name > b.name ? 1 : 0
@@ -179,6 +257,8 @@ const main = async (): Promise<void> => {
 
     return content
   }
+
+  assertResolvableGraph(items)
 
   const payloads = [...items].sort(byName).map((item) => toPayload(item, read))
   const documents = new Map<string, string>([
