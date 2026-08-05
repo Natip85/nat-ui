@@ -1,0 +1,55 @@
+---
+title: Installation
+description: Set a project up to use nat-ui.
+---
+
+<CliCommand args='init' />
+
+`init` configures a project in one pass. It asks where your stylesheet and
+import aliases live, then writes `components.json` with those answers, creates a
+`cn` helper at your `utils` alias, adds theme variables to your stylesheet, and
+installs `clsx` and `tailwind-merge` with your detected package manager. You
+also pick a base color, `neutral` or `slate`.
+
+That config is what [`add`](/docs/cli) reads afterwards, so components land
+where you already keep things, with their imports rewritten to your aliases.
+
+## What it needs to find
+
+The one thing `init` will not guess is your stylesheet. If it cannot find a file
+that imports `tailwindcss`, it stops rather than picking one at random — writing
+theme variables into the wrong file is harder to notice than an error, and
+harder to undo.
+
+Everything else it detects and offers as a default: the alias prefix from your
+`tsconfig.json` `paths`, TypeScript from the presence of a `tsconfig.json`,
+React Server Components from a Next.js project with an `app` directory, and your
+package manager from its lockfile.
+
+## Running it without prompts
+
+Pass `--yes` (or `-y`) to accept every detected default without being asked:
+
+<CliCommand args='init --yes' />
+
+The same defaults apply automatically when stdin is not a TTY, so `init` will
+not hang in CI waiting for an answer nobody is there to give.
+
+## Running it again
+
+Re-running `init` is safe. It updates the theme block in your stylesheet in
+place rather than appending a second copy, and if `components.json` already
+exists it asks before overwriting — declining, and changing nothing, when it
+cannot ask.
+
+<Callout type='warn'>
+  If you ran `init` with 0.1.0, run it again before adding components. The theme block that version
+  wrote does not map the tokens into Tailwind's design system, so components styled against them
+  render unstyled. Re-running replaces the block in place.
+</Callout>
+
+## Next
+
+Add your first component:
+
+<CliCommand args='add button' />

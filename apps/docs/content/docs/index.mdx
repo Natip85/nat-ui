@@ -5,3 +5,38 @@ description: A component distribution platform. Copy-paste components, own the c
 
 Components are copied into your project as source you own and can edit, not
 installed as a dependency you can only configure.
+
+That is the whole idea. There is no `nat-ui` package in your `dependencies` and
+no version of it to upgrade. When a component is not quite what you need, you
+change it, the way you would change any other file in your project.
+
+Built on [Base UI](https://base-ui.com) for behaviour and Tailwind CSS for
+styling. TypeScript throughout.
+
+<Callout>
+  Early development. `init` and `add` are available, and there are three components so far. More are
+  on the way.
+</Callout>
+
+## Getting started
+
+<Cards>
+  <Card
+    title='Installation'
+    href='/docs/installation'
+    description='Configure a project in one pass with init.'
+  />
+  <Card title='CLI' href='/docs/cli' description='The two commands, and every flag they take.' />
+  <Card
+    title='components.json'
+    href='/docs/components-json'
+    description='The file init writes and every add reads.'
+  />
+  <Card
+    title='Theming'
+    href='/docs/theming'
+    description='The tokens components are styled against.'
+  />
+</Cards>
+
+Or go straight to the [components](/components).

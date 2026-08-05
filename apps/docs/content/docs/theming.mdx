@@ -1,0 +1,80 @@
+---
+title: Theming
+description: The tokens components are styled against, and how to change them.
+---
+
+Components are styled against CSS variables rather than fixed colours. Change a
+variable and every component that uses it follows, with no edits to component
+source and no rebuild of anything but your stylesheet.
+
+`init` writes the variables into the stylesheet you name, between a pair of
+markers:
+
+```css title="app/globals.css"
+@import 'tailwindcss';
+
+/* nat-ui theme start */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  /* … */
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  /* … */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* … */
+  --radius-lg: var(--radius);
+}
+/* nat-ui theme end */
+```
+
+## Why there are three blocks
+
+The first two are the values, light and dark. The third is what makes them
+reachable from Tailwind.
+
+Tailwind v4 builds its utilities from `@theme` variables, so `--primary` on its
+own produces no `bg-primary`. The `inline` form points a design token at a
+variable defined elsewhere, which is what keeps the `.dark` override working:
+the utility resolves through `var(--primary)` at the point of use rather than
+being frozen to the light value when the stylesheet is compiled.
+
+<Callout type='warn'>
+  This is the difference between 0.1.0 and later versions. A theme block without the `@theme inline`
+  mapping leaves components rendering unstyled. Re-run `init` to replace it.
+</Callout>
+
+## The markers
+
+`init` looks for the two comments and replaces everything between them, which is
+what makes re-running it safe.
+
+It refuses to proceed on a stylesheet with only one of the markers, or with two
+complete blocks. Both cases would leave a stale block below the new one, where
+it wins the cascade and quietly overrides the theme you just picked — an error
+is easier to act on than a colour that will not change.
+
+## Base colors
+
+`init` offers two, `neutral` and `slate`, and records the answer as
+`tailwind.baseColor` in [`components.json`](/docs/components-json). They differ
+only in the values written into the block; the token names are identical, so
+switching between them is a re-run of `init` and nothing else.
+
+## Changing the theme
+
+Edit the values under `:root` and `.dark`. They are yours — the markers exist so
+`init` can find its block, not to fence you out of it. The one thing to keep is
+the token names, since component source refers to them by name.
+
+To change the corner radius everywhere, set `--radius`. The four Tailwind radius
+steps are derived from it, so `rounded-sm` through `rounded-xl` all move
+together.
