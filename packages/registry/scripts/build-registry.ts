@@ -181,6 +181,10 @@ const main = async (): Promise<void> => {
   }
 
   const payloads = [...items].sort(byName).map((item) => toPayload(item, read))
+  const documents = new Map<string, string>([
+    ...payloads.map((payload) => [`${payload.name}.json`, serialize(payload)]),
+    ['index.json', serialize(toIndex(items))],
+  ])
 
   // Removed rather than overwritten, so deleting an item also deletes its
   // document instead of leaving a file nothing points at.
@@ -188,10 +192,9 @@ const main = async (): Promise<void> => {
     await rm(outputDir, {recursive: true, force: true})
     await mkdir(outputDir, {recursive: true})
 
-    for (const payload of payloads) {
-      await writeFile(join(outputDir, `${payload.name}.json`), serialize(payload))
+    for (const [name, document] of documents) {
+      await writeFile(join(outputDir, name), document)
     }
-    await writeFile(join(outputDir, 'index.json'), serialize(toIndex(items)))
   }
 
   console.log(`Wrote ${String(payloads.length)} registry item(s) to r/.`)
