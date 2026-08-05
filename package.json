@@ -9,13 +9,13 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "build": "pnpm --filter './packages/*' build",
+    "build": "pnpm --filter \"./packages/*\" --fail-if-no-match build",
     "build:docs": "pnpm --filter @nat-ui/docs build",
     "typecheck": "pnpm --recursive typecheck",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "pnpm --filter @nat-ui/docs --fail-if-no-match typegen && eslint .",
+    "lint:fix": "pnpm --filter @nat-ui/docs --fail-if-no-match typegen && eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "new:component": "tsx scripts/new-component.ts",

@@ -9,7 +9,8 @@
     "build": "pnpm --filter @nat-ui/registry... --fail-if-no-match build && next build",
     "dev": "next dev",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typegen": "next typegen",
+    "typecheck": "pnpm run typegen && tsc --noEmit"
   },
   "dependencies": {
     "@nat-ui/registry": "workspace:*",
