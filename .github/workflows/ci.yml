@@ -73,6 +73,11 @@ jobs:
 
       - run: pnpm test
 
+      # The docs app is a Next build, which is slow and platform-insensitive.
+      # Once, on the cheapest runner, is enough signal.
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        run: pnpm build:docs
+
   pack-integrity:
     runs-on: ubuntu-latest
 

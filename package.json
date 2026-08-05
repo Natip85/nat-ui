@@ -9,7 +9,8 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "build": "pnpm --recursive build",
+    "build": "pnpm --filter './packages/*' build",
+    "build:docs": "pnpm --filter @nat-ui/docs build",
     "typecheck": "pnpm --recursive typecheck",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
