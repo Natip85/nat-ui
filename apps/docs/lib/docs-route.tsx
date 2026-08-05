@@ -1,11 +1,11 @@
-import {DocsLayout} from 'fumadocs-ui/layouts/docs'
-import {DocsBody, DocsDescription, DocsPage, DocsTitle} from 'fumadocs-ui/layouts/docs/page'
+import {DocsLayout} from 'fumadocs-ui/layouts/notebook'
+import {DocsBody, DocsDescription, DocsPage, DocsTitle} from 'fumadocs-ui/layouts/notebook/page'
 import {createRelativeLink} from 'fumadocs-ui/mdx'
 import type {Metadata} from 'next'
 import {notFound} from 'next/navigation'
 import type {ReactNode} from 'react'
 import {getMDXComponents} from '@/components/mdx'
-import {baseOptions} from '@/lib/layout.shared'
+import {baseOptions, docsSlots} from '@/lib/layout.shared'
 import {docsSource} from '@/lib/source'
 
 /**
@@ -43,9 +43,21 @@ export const docsPageMetadata = (source: DocsSource, slug: string[] | undefined)
   return {title: page.data.title, description: page.data.description}
 }
 
+/**
+ * The notebook layout rather than the plain docs layout, because the plain one
+ * folds navigation into the sidebar and leaves no bar across the top. `mode:
+ * 'top'` spans the bar the full width.
+ *
+ * This layout must stay the outermost one on documentation routes. Nesting it
+ * inside another layout detaches the sidebar's sticky offsets, so the sidebar
+ * scrolls with the page instead of independently, and drops the trigger that
+ * opens it on small screens.
+ */
 export function DocsRouteLayout({children, source}: {children: ReactNode; source: DocsSource}) {
+  const {nav, ...base} = baseOptions()
+
   return (
-    <DocsLayout tree={source.getPageTree()} {...baseOptions()}>
+    <DocsLayout tree={source.getPageTree()} {...base} nav={{...nav, mode: 'top'}} slots={docsSlots}>
       {children}
     </DocsLayout>
   )

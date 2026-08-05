@@ -1,5 +1,6 @@
 import type {BaseLayoutProps} from 'fumadocs-ui/layouts/shared'
-import {appName, componentsRoute, docsRoute, gitConfig} from './shared'
+import {DocsHeader, HomeHeader} from '@/components/site-header'
+import {appName, githubUrl, navLinks} from './shared'
 
 /**
  * One object behind every layout, so the navigation bar, search trigger, and
@@ -8,11 +9,20 @@ import {appName, componentsRoute, docsRoute, gitConfig} from './shared'
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {title: appName},
-    links: [
-      {text: 'Home', url: '/', active: 'url'},
-      {text: 'Docs', url: docsRoute, active: 'nested-url'},
-      {text: 'Components', url: componentsRoute, active: 'nested-url'},
-    ],
-    githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
+    links: navLinks.map(({text, url, nested}) => ({
+      text,
+      url,
+      active: nested ? 'nested-url' : 'url',
+    })),
+    githubUrl,
   }
 }
+
+/**
+ * Passing our own header into each layout's slot, which is what makes the bar
+ * the same everywhere. The layouts keep their own internals — the sidebar and
+ * its offsets break if the documentation layout is nested inside another — so
+ * only the bar is shared, not the surrounding structure.
+ */
+export const homeSlots = {header: HomeHeader}
+export const docsSlots = {header: DocsHeader}

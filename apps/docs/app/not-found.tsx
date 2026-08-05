@@ -1,6 +1,6 @@
 import {HomeLayout} from 'fumadocs-ui/layouts/home'
 import Link from 'next/link'
-import {baseOptions} from '@/lib/layout.shared'
+import {baseOptions, homeSlots} from '@/lib/layout.shared'
 
 /**
  * The navigation bar is global, and a 404 is the page a lost reader is most
@@ -9,7 +9,7 @@ import {baseOptions} from '@/lib/layout.shared'
  */
 export default function NotFound() {
   return (
-    <HomeLayout {...baseOptions()}>
+    <HomeLayout {...baseOptions()} slots={homeSlots}>
       <main className='flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center'>
         <h1 className='text-3xl font-bold tracking-tight'>Page not found</h1>
         <p className='text-fd-muted-foreground max-w-md'>
