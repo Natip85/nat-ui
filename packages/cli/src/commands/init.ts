@@ -3,7 +3,7 @@ import {dirname, join} from 'node:path'
 import {CONFIG_FILE_NAME, type Config} from '@nat-ui/schema'
 import {aliasesFor, resolveConfig, type InitAnswers} from '../config/resolve'
 import {installCommand, type PackageManager} from '../detect/package-manager'
-import {detectProject, toPosixPath} from '../detect/project'
+import {detectProject, targetDirForPrefix, toPosixPath} from '../detect/project'
 import {atomicWriteFile} from '../fs/atomic-write'
 import {readText} from '../fs/read-text'
 import {aliasBaseDir, aliasToPath, isWithinRoot} from '../paths/alias'
@@ -105,6 +105,29 @@ export const init = async (io: InitIo, options: {yes: boolean}): Promise<number>
   // Use the prefix the user chose at the prompt, not the detected default —
   // the prompt can override it.
   const utilsBaseDir = aliasBaseDir(io.cwd, detected.aliasTargets, answers.aliasPrefix, answers.css)
+
+  // The quiet failure behind every "cannot find module '@/lib/utils'" report:
+  // the files land in the right place, but nothing tells the compiler what the
+  // prefix means, so the first error a user sees comes from a file they did not
+  // write. Vite is the usual case — `create-vite`'s root tsconfig.json is a
+  // solution file with `files: []`, so it compiles nothing and an entry added
+  // there has no effect. Warn rather than write: the tsconfig that actually
+  // compiles the app is a guess from here, and editing someone's build config
+  // is further than this command should reach.
+  if (
+    answers.tsx &&
+    detected.hasTsconfig &&
+    targetDirForPrefix(detected.aliasTargets, answers.aliasPrefix) === undefined
+  ) {
+    const target = utilsBaseDir === '' ? './*' : `./${utilsBaseDir}/*`
+    io.log(
+      `tsconfig.json does not map "${answers.aliasPrefix}/*" to a directory, so imports like "${aliasesFor(answers.aliasPrefix).utils}" will not resolve yet.`,
+    )
+    io.log(
+      `Add "paths": {"${answers.aliasPrefix}/*": ["${target}"]} to the tsconfig that compiles your app. In a Vite project that is tsconfig.app.json, not tsconfig.json.`,
+    )
+  }
+
   const extension = answers.tsx ? '.ts' : '.js'
   const relativeUtils = `${aliasToPath(aliasesFor(answers.aliasPrefix).utils, answers.aliasPrefix, utilsBaseDir)}${extension}`
   const absoluteUtils = join(io.cwd, relativeUtils)

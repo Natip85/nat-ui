@@ -29,6 +29,7 @@ Available components: `button`, `input`, `dialog`.
 
 The site covers the rest:
 [installation](https://nat-ui-delta.vercel.app/docs/installation),
+[Vite setup](https://nat-ui-delta.vercel.app/docs/vite),
 [the CLI and its flags](https://nat-ui-delta.vercel.app/docs/cli),
 [`components.json`](https://nat-ui-delta.vercel.app/docs/components-json), and
 [theming](https://nat-ui-delta.vercel.app/docs/theming).

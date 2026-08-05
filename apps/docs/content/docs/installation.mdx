@@ -26,6 +26,11 @@ Everything else it detects and offers as a default: the alias prefix from your
 React Server Components from a Next.js project with an `app` directory, and your
 package manager from its lockfile.
 
+If your `tsconfig.json` maps no alias, `init` says so and carries on, because
+the components it writes will not resolve until one exists. Next.js projects
+have one already. Vite projects do not, so [set the alias up
+first](/docs/vite).
+
 ## Running it without prompts
 
 Pass `--yes` (or `-y`) to accept every detected default without being asked:

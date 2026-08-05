@@ -568,4 +568,74 @@ describe('init', () => {
     expect(logs.join('\n')).toMatch(/tsconfig/i)
     expect(await read('lib/utils.ts')).toContain('export function cn(')
   })
+
+  test('warns when tsconfig maps nothing for the alias, as a Vite project does', async () => {
+    // `create-vite` writes a solution tsconfig — no compilerOptions at all,
+    // just references to the configs that do the compiling. Nothing here maps
+    // `@`, so the components written below would not resolve.
+    await write('package.json', '{}')
+    await write(
+      'tsconfig.json',
+      JSON.stringify({files: [], references: [{path: './tsconfig.app.json'}]}),
+    )
+    await write('src/index.css', "@import 'tailwindcss';\n")
+
+    const code = await init(io(), {yes: true})
+    const output = logs.join('\n')
+
+    expect(code).toBe(0)
+    expect(output).toContain('does not map "@/*" to a directory')
+    expect(output).toContain('"paths": {"@/*": ["./src/*"]}')
+    expect(output).toContain('tsconfig.app.json')
+    // Advice, not a failure: everything still gets written.
+    expect(await read('src/lib/utils.ts')).toContain('export function cn(')
+    expect(await read('components.json')).toContain('"@/lib/utils"')
+  })
+
+  test('warns when the alias chosen at the prompt is not the one tsconfig maps', async () => {
+    await write('package.json', '{}')
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'~/*': ['./src/*']}}}))
+    await write('src/index.css', "@import 'tailwindcss';\n")
+
+    const code = await init(
+      io({
+        interactive: true,
+        ask: () =>
+          Promise.resolve({
+            baseColor: 'neutral' as const,
+            css: 'src/index.css',
+            aliasPrefix: '@',
+            rsc: false,
+            tsx: true,
+          }),
+      }),
+      {yes: false},
+    )
+
+    expect(code).toBe(0)
+    expect(logs.join('\n')).toContain('does not map "@/*" to a directory')
+  })
+
+  test('warns when the mapping exists but names no directory', async () => {
+    // A declared alias whose value holds no usable string resolves no better
+    // than a missing one, so the absence of a target is what matters here, not
+    // the absence of a key.
+    await write('package.json', '{}')
+    await write('tsconfig.json', JSON.stringify({compilerOptions: {paths: {'@/*': []}}}))
+    await write('src/index.css', "@import 'tailwindcss';\n")
+
+    const code = await init(io(), {yes: true})
+
+    expect(code).toBe(0)
+    expect(logs.join('\n')).toContain('does not map "@/*" to a directory')
+  })
+
+  test('says nothing about paths when tsconfig already maps the alias', async () => {
+    await nextProject()
+
+    const code = await init(io(), {yes: true})
+
+    expect(code).toBe(0)
+    expect(logs.join('\n')).not.toContain('does not map')
+  })
 })

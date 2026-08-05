@@ -1,0 +1,85 @@
+---
+title: Vite
+description: Point the @ alias at your source directory so components resolve.
+---
+
+`create-vite` sets up no import alias, so a fresh Vite project has no idea what
+`@/` means. Next.js projects come with one already, which is why this page is
+only about Vite.
+
+Skip it and `add` writes perfectly good files that do not compile, with the
+first error coming from a file you did not write:
+
+```text
+src/App.tsx(1,22): error TS2307: Cannot find module '@/components/ui/button'
+src/components/ui/button.tsx(4,18): error TS2307: Cannot find module '@/lib/utils'
+```
+
+`init` warns when it sees this, but it will not edit your TypeScript config for
+you — which config compiles your application is a guess from the outside, and
+guessing wrong writes to a file that changes nothing.
+
+## Add the alias
+
+The config that compiles your application is `tsconfig.app.json`. Add `paths`
+inside its `compilerOptions`:
+
+```json title="tsconfig.app.json"
+{
+  "compilerOptions": {
+    "paths": {"@/*": ["./src/*"]}
+  }
+}
+```
+
+Then add the same block to `tsconfig.json`. That copy compiles nothing — the
+root file is a solution file, with `"files": []` and references to the configs
+that do the real work — so it exists purely so tools looking in the conventional
+place can discover your alias. `init` is one of them:
+
+```json title="tsconfig.json"
+{
+  "files": [],
+  "references": [{"path": "./tsconfig.app.json"}, {"path": "./tsconfig.node.json"}],
+  "compilerOptions": {
+    "paths": {"@/*": ["./src/*"]}
+  }
+}
+```
+
+That is the whole change. Vite resolves TypeScript's `paths` itself, so no
+`resolve.alias` entry in `vite.config.ts` is needed.
+
+<Callout type='warn'>
+  Guides written against older toolchains pair `paths` with `baseUrl`, and build a `resolve.alias`
+  from `__dirname`. Neither belongs in a current project. TypeScript 6 rejects `baseUrl` outright
+  with `TS5101: Option 'baseUrl' is deprecated`, and Vite 8 warns that `__dirname` is unsupported by
+  its config loader. A relative `paths` target resolves against the file it is written in, so
+  `baseUrl` has nothing left to do.
+</Callout>
+
+## Tailwind has to be there first
+
+`init` looks for a stylesheet that imports `tailwindcss` and stops if it cannot
+find one, so set Tailwind up before running it. For Vite that means the
+`@tailwindcss/vite` plugin and an `@import 'tailwindcss'` in `src/index.css`.
+
+```ts title="vite.config.ts"
+import tailwindcss from '@tailwindcss/vite'
+import react from '@vitejs/plugin-react'
+import {defineConfig} from 'vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+
+## Then run init
+
+<CliCommand args='init' />
+
+With the alias in place, `init` detects `@` from your `tsconfig.json` rather
+than falling back to a guess, and everything after this point works the same as
+it does anywhere else.
+
+<CliCommand args='add button' />
