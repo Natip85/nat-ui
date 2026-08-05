@@ -1,12 +1,19 @@
+import {join} from 'node:path'
 import type {RegistryItem} from '@nat-ui/schema'
-import {describe, expect, test} from 'vitest'
+import {describe, expect, it, test} from 'vitest'
 import {
+  assertResolvableGraph,
   byName,
+  danglingRegistryDependencies,
   importSpecifiers,
   normalizeNewlines,
+  outputDirectories,
+  packageNameOf,
+  registryDependencyCycles,
   serialize,
   toIndex,
   toPayload,
+  undeclaredDependencies,
   unsupportedAliasImports,
 } from './build-registry'
 
@@ -135,5 +142,219 @@ describe('byName', () => {
 describe('serialize', () => {
   test('writes two-space JSON with a trailing newline', () => {
     expect(serialize({a: 1})).toBe('{\n  "a": 1\n}\n')
+  })
+})
+
+describe('outputDirectories', () => {
+  it('writes the committed copy and the copy the site serves', () => {
+    // Built with `join` rather than written as POSIX literals: the function
+    // joins too, so literals would assert this platform's separator and fail
+    // the Windows leg of the matrix rather than testing where the paths land.
+    expect(outputDirectories(join('/repo', 'packages', 'registry'))).toEqual([
+      join('/repo', 'r'),
+      join('/repo', 'apps', 'docs', 'public', 'r'),
+    ])
+  })
+})
+
+describe('packageNameOf', () => {
+  it('returns the package name for a bare specifier', () => {
+    expect(packageNameOf('clsx')).toBe('clsx')
+  })
+
+  it('keeps both segments of a scoped package', () => {
+    expect(packageNameOf('@base-ui/react')).toBe('@base-ui/react')
+  })
+
+  it('strips a subpath from a scoped package', () => {
+    expect(packageNameOf('@base-ui/react/button')).toBe('@base-ui/react')
+  })
+
+  it('strips a subpath from an unscoped package', () => {
+    expect(packageNameOf('lucide-react/icons/x')).toBe('lucide-react')
+  })
+
+  it('ignores a relative import', () => {
+    expect(packageNameOf('./sibling')).toBeUndefined()
+  })
+
+  it('ignores an alias import', () => {
+    expect(packageNameOf('@/lib/utils')).toBeUndefined()
+  })
+
+  it('ignores a node builtin', () => {
+    expect(packageNameOf('node:path')).toBeUndefined()
+  })
+})
+
+describe('undeclaredDependencies', () => {
+  it('finds an import that is not declared', () => {
+    const source = "import clsx from 'clsx'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+
+  it('accepts an import that is declared', () => {
+    const source = "import {Button} from '@base-ui/react/button'\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('allows react without a declaration, because consumers already have it', () => {
+    const source = "import type {ComponentProps} from 'react'\nimport 'react-dom'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+
+  it('ignores the utils alias, which init writes rather than installs', () => {
+    const source = "import {cn} from '@/lib/utils'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+
+  it('reports each missing package once', () => {
+    const source = "import 'clsx'\nimport {x} from 'clsx'\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+
+  it('reports a dynamically imported package that is not declared', () => {
+    const source = "const {clsx} = await import('clsx')\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual(['clsx'])
+  })
+
+  it('accepts a dynamically imported package that is declared', () => {
+    const source = "const {Button} = await import('@base-ui/react/button')\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('resolves a dynamic import subpath to the package name', () => {
+    const source = "import('@base-ui/react/button')\n"
+
+    expect(undeclaredDependencies(source, ['@base-ui/react'])).toEqual([])
+  })
+
+  it('ignores a dynamic alias import', () => {
+    const source = "import('@/lib/utils')\n"
+
+    expect(undeclaredDependencies(source, [])).toEqual([])
+  })
+})
+
+const ui = (name: string, registryDependencies?: string[]): RegistryItem => ({
+  name,
+  type: 'ui',
+  ...(registryDependencies === undefined ? {} : {registryDependencies}),
+  files: [{path: `components/ui/${name}.tsx`, type: 'ui'}],
+})
+
+describe('danglingRegistryDependencies', () => {
+  it('accepts a dependency the registry defines', () => {
+    expect(danglingRegistryDependencies([ui('dialog', ['button']), ui('button')])).toEqual([])
+  })
+
+  it('reports a dependency nothing defines', () => {
+    expect(danglingRegistryDependencies([ui('dialog', ['buton']), ui('button')])).toEqual([
+      'dialog -> buton',
+    ])
+  })
+
+  it('reports every offending pair', () => {
+    expect(danglingRegistryDependencies([ui('a', ['x']), ui('b', ['y'])])).toEqual([
+      'a -> x',
+      'b -> y',
+    ])
+  })
+})
+
+describe('registryDependencyCycles', () => {
+  it('accepts an acyclic graph', () => {
+    expect(registryDependencyCycles([ui('dialog', ['button']), ui('button')])).toEqual([])
+  })
+
+  it('accepts a diamond, where a shared dependency is reached twice', () => {
+    const all = [ui('a', ['b', 'c']), ui('b', ['d']), ui('c', ['d']), ui('d')]
+
+    expect(registryDependencyCycles(all)).toEqual([])
+  })
+
+  it('reports a two-item cycle', () => {
+    expect(registryDependencyCycles([ui('a', ['b']), ui('b', ['a'])])).toEqual(['a -> b -> a'])
+  })
+
+  it('reports an item depending on itself', () => {
+    expect(registryDependencyCycles([ui('a', ['a'])])).toEqual(['a -> a'])
+  })
+
+  it('reports a longer cycle once, whichever item the walk starts from', () => {
+    const all = [ui('b', ['c']), ui('c', ['a']), ui('a', ['b'])]
+
+    expect(registryDependencyCycles(all)).toEqual(['a -> b -> c -> a'])
+  })
+
+  it('finds a cycle that no listed item leads into', () => {
+    const all = [ui('entry', ['a']), ui('a', ['b']), ui('b', ['a'])]
+
+    expect(registryDependencyCycles(all)).toEqual(['a -> b -> a'])
+  })
+})
+
+describe('assertResolvableGraph', () => {
+  it('accepts the graph the registry actually ships', () => {
+    expect(() => {
+      assertResolvableGraph([ui('dialog', ['button']), ui('button'), ui('input')])
+    }).not.toThrow()
+  })
+
+  it('names the item and the dependency it cannot resolve', () => {
+    expect(() => {
+      assertResolvableGraph([ui('dialog', ['buton'])])
+    }).toThrow(/dialog -> buton/)
+  })
+
+  it('refuses a cycle', () => {
+    expect(() => {
+      assertResolvableGraph([ui('a', ['b']), ui('b', ['a'])])
+    }).toThrow(/cycle: a -> b -> a/)
+  })
+})
+
+describe('toPayload dependency validation', () => {
+  it('refuses a file importing a package the item does not declare', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "import clsx from 'clsx'\n"
+
+    expect(() => toPayload(item, read)).toThrow(/clsx/)
+  })
+
+  it('accepts a file whose imports are all declared', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "import {Input} from '@base-ui/react/input'\n"
+
+    expect(toPayload(item, read).files[0]?.content).toContain('@base-ui/react/input')
+  })
+
+  it('refuses a file dynamically importing a package the item does not declare', () => {
+    const item: RegistryItem = {
+      name: 'input',
+      type: 'ui',
+      dependencies: ['@base-ui/react'],
+      files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    }
+    const read = () => "const {clsx} = await import('clsx')\n"
+
+    expect(() => toPayload(item, read)).toThrow(/clsx/)
   })
 })

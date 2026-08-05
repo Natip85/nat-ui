@@ -1,0 +1,70 @@
+---
+title: Button
+description: A clickable action, in six variants and four sizes.
+---
+
+<ComponentPreview name='button-demo' />
+
+## Installation
+
+<ComponentInstallation item='button' />
+
+## Usage
+
+```tsx
+import {Button} from '@/components/ui/button'
+```
+
+```tsx
+<Button variant='outline'>Button</Button>
+```
+
+## Default
+
+<ComponentPreview name='button-default' />
+
+## Secondary
+
+<ComponentPreview name='button-secondary' />
+
+## Destructive
+
+<ComponentPreview name='button-destructive' />
+
+## Outline
+
+<ComponentPreview name='button-outline' />
+
+## Ghost
+
+<ComponentPreview name='button-ghost' />
+
+## Link
+
+<ComponentPreview name='button-link' />
+
+## Size
+
+<ComponentPreview name='button-size' />
+
+## Icon
+
+An icon button is square. Give it an `aria-label`, because the icon carries the
+meaning and there is no text for a screen reader to announce.
+
+<ComponentPreview name='button-icon' />
+
+## Disabled
+
+<ComponentPreview name='button-disabled' />
+
+## API Reference
+
+| Prop      | Values                                                            | Default   |
+| --------- | ----------------------------------------------------------------- | --------- |
+| `variant` | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
+| `size`    | `sm`, `default`, `lg`, `icon`                                     | `default` |
+
+Every other prop is forwarded to Base UI's `Button`. `className` is narrowed to
+a string: Base UI also accepts a function of the component's state, but the
+variants here decide their classes without it.

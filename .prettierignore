@@ -6,3 +6,7 @@ coverage
 pnpm-lock.yaml
 apps/docs/public/r
 r/
+apps/docs/.source
+apps/docs/.next
+# Next typegen rewrites this on every typecheck; Prettier and Next disagree on array style.
+apps/docs/tsconfig.json

@@ -1,0 +1,79 @@
+---
+title: CLI
+description: The two commands, and every flag they take.
+---
+
+The CLI has two commands. `init` configures a project; `add` copies components
+into it.
+
+```
+nat-ui <command> [options]
+
+Commands
+  init                 Configure a project to use nat-ui
+  add <component...>   Add components to your project
+
+Options
+  -y, --yes            Accept every default without asking
+      --overwrite      Replace files that already exist
+      --registry <url> Use a different registry
+  -v, --version        Print the version
+  -h, --help           Show this message
+```
+
+`--yes` and `--overwrite` are not two ways of saying the same thing. `--yes`
+takes every default, and the default for a file you already have is to keep it,
+so `--yes` answers _no_ to the overwrite question. `--overwrite` is what answers
+yes. [Replacing files you have already
+edited](#replacing-files-you-have-already-edited) has the details.
+
+## `init`
+
+Covered in [Installation](/docs/installation). It takes `--yes` and nothing
+else: passing `--overwrite` or `--registry` to it is an error rather than a
+silent no-op, because both would suggest a behaviour it does not have.
+
+## `add`
+
+<CliCommand args='add button' />
+
+Components are copied into the directory your `components.json` names, with
+imports rewritten to your aliases. Name as many as you like at once:
+
+<CliCommand args='add button input dialog' />
+
+Naming a component pulls in whatever it depends on, so `add dialog` also writes
+`button` — the dialog's close control is styled with `buttonVariants`.
+
+### Replacing files you have already edited
+
+`add` will not overwrite an existing file without asking. `--overwrite` answers
+yes in advance:
+
+<CliCommand args='add dialog --overwrite' />
+
+This discards local edits to the files it writes. That is the point of the flag,
+but it is worth a clean git tree first.
+
+Every other way of not being asked declines. That covers a non-TTY stdin, and it
+covers `--yes`: adding a component you already have with `add button --yes`
+prints `Left components/ui/button.tsx alone, since it already exists.` and exits
+0 without writing anything. If what you want is an update — in a CI job, say —
+`--overwrite` is the flag to reach for, on its own or alongside `--yes`.
+
+### Pointing at a different registry
+
+`--registry` takes the base URL that item JSON is fetched from, which is useful
+for a fork or a private mirror:
+
+<CliCommand args='add button --registry https://example.com/r' />
+
+The `NAT_UI_REGISTRY_URL` environment variable does the same for a whole shell
+session. The flag beats the environment variable, which beats the built-in
+default.
+
+## Limitations
+
+`add` writes TypeScript. A project configured with `"tsx": false` is not
+supported yet — `init` will accept the answer, but `add` then refuses rather
+than writing TypeScript into a JavaScript project.

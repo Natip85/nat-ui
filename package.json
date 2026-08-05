@@ -9,14 +9,16 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "build": "pnpm --recursive build",
+    "build": "pnpm --filter \"./packages/*\" --fail-if-no-match build",
+    "build:docs": "pnpm --filter @nat-ui/docs build",
     "typecheck": "pnpm --recursive typecheck",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "pnpm --filter @nat-ui/docs --fail-if-no-match typegen && eslint .",
+    "lint:fix": "pnpm --filter @nat-ui/docs --fail-if-no-match typegen && eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "new:component": "tsx scripts/new-component.ts",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
@@ -24,12 +26,14 @@
   "devDependencies": {
     "@changesets/cli": "catalog:",
     "@eslint/js": "catalog:",
+    "@nat-ui/schema": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
     "globals": "catalog:",
     "jiti": "catalog:",
     "prettier": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:"

@@ -73,6 +73,11 @@ jobs:
 
       - run: pnpm test
 
+      # The docs app is a Next build, which is slow and platform-insensitive.
+      # Once, on the cheapest runner, is enough signal.
+      - if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        run: pnpm build:docs
+
   pack-integrity:
     runs-on: ubuntu-latest
 
@@ -102,3 +107,86 @@ jobs:
       # `--fail-if-no-match` because a filter that matches nothing exits 0,
       # which would quietly turn this guard into a no-op that still reports green.
       - run: pnpm --filter @nat-ui/cli --fail-if-no-match run verify-pack
+
+  smoke-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Serve the freshly built registry over HTTP. `add` fetches by URL, so a
+      # file path is not an option.
+      #
+      # One step, not two: `&` makes a step exit 0 whatever the server did, so a
+      # startup failure would surface half a minute later as a `wait-on` timeout
+      # explaining nothing. Waiting here reports it where it happened, and the
+      # log is on disk to read. Redirecting stdout also matters on its own — a
+      # step ends when its stdout pipe closes, so a background process holding
+      # that pipe open can hang the job.
+      - run: |
+          npx --yes serve r --listen 8420 > "$RUNNER_TEMP/serve.log" 2>&1 < /dev/null &
+          npx --yes wait-on http://localhost:8420/index.json --timeout 30000 ||
+            { cat "$RUNNER_TEMP/serve.log"; exit 1; }
+
+      # Outside the workspace on purpose. pnpm gives it an isolated
+      # node_modules containing only what the CLI installed, so an undeclared
+      # dependency fails here as it would for a user.
+      - run: pnpm --package=create-next-app@latest dlx create-next-app consumer
+          --ts --tailwind --app --no-eslint --no-src-dir
+          --import-alias "@/*" --use-pnpm --yes
+        working-directory: ${{ runner.temp }}
+
+      - run: node ${{ github.workspace }}/packages/cli/dist/index.js init --yes
+        working-directory: ${{ runner.temp }}/consumer
+
+      - run: node ${{ github.workspace }}/packages/cli/dist/index.js add button input dialog
+          --registry http://localhost:8420
+        working-directory: ${{ runner.temp }}/consumer
+
+      # Next only compiles files a route reaches, so import installed components
+      # to make this build a meaningful consumer probe.
+      - run: |
+          cat <<'EOF' > app/page.tsx
+          import {Button} from '@/components/ui/button'
+          import {
+            Dialog,
+            DialogContent,
+            DialogDescription,
+            DialogTitle,
+            DialogTrigger,
+          } from '@/components/ui/dialog'
+          import {Input} from '@/components/ui/input'
+
+          export default function Home() {
+            return (
+              <main>
+                <Button>Save</Button>
+                <Input aria-label='Name' />
+                <Dialog>
+                  <DialogTrigger render={<Button>Open</Button>} />
+                  <DialogContent>
+                    <DialogTitle>Settings</DialogTitle>
+                    <DialogDescription>Update your preferences.</DialogDescription>
+                  </DialogContent>
+                </Dialog>
+              </main>
+            )
+          }
+          EOF
+        working-directory: ${{ runner.temp }}/consumer
+
+      - run: pnpm build
+        working-directory: ${{ runner.temp }}/consumer
