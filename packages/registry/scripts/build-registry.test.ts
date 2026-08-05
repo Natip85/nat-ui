@@ -1,3 +1,4 @@
+import {join} from 'node:path'
 import type {RegistryItem} from '@nat-ui/schema'
 import {describe, expect, it, test} from 'vitest'
 import {
@@ -143,9 +144,12 @@ describe('serialize', () => {
 
 describe('outputDirectories', () => {
   it('writes the committed copy and the copy the site serves', () => {
-    expect(outputDirectories('/repo/packages/registry')).toEqual([
-      '/repo/r',
-      '/repo/apps/docs/public/r',
+    // Built with `join` rather than written as POSIX literals: the function
+    // joins too, so literals would assert this platform's separator and fail
+    // the Windows leg of the matrix rather than testing where the paths land.
+    expect(outputDirectories(join('/repo', 'packages', 'registry'))).toEqual([
+      join('/repo', 'r'),
+      join('/repo', 'apps', 'docs', 'public', 'r'),
     ])
   })
 })
