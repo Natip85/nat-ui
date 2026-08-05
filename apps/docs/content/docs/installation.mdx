@@ -32,6 +32,10 @@ Pass `--yes` (or `-y`) to accept every detected default without being asked:
 
 <CliCommand args='init --yes' />
 
+On a project that has no `components.json` yet, that is the whole run. On one
+that already has it, see [Running it again](#running-it-again) — `--yes` declines
+the overwrite rather than accepting it.
+
 The same defaults apply automatically when stdin is not a TTY, so `init` will
 not hang in CI waiting for an answer nobody is there to give.
 
@@ -39,13 +43,19 @@ not hang in CI waiting for an answer nobody is there to give.
 
 Re-running `init` is safe. It updates the theme block in your stylesheet in
 place rather than appending a second copy, and if `components.json` already
-exists it asks before overwriting — declining, and changing nothing, when it
-cannot ask.
+exists it asks before overwriting.
+
+Not being asked means no. `--yes` accepts the defaults, and keeping the config
+you already have is the default, so `init --yes` on a configured project prints
+`Found an existing components.json. Nothing was changed.` and exits 0 — the same
+as when stdin is not a TTY. `init` has no `--overwrite`; to rewrite the config,
+answer the prompt or delete `components.json` first.
 
 <Callout type='warn'>
   If you ran `init` with 0.1.0, run it again before adding components. The theme block that version
   wrote does not map the tokens into Tailwind's design system, so components styled against them
-  render unstyled. Re-running replaces the block in place.
+  render unstyled. Re-running replaces the block in place — but answer the overwrite prompt, because
+  `--yes` declines it and then nothing, the theme block included, is rewritten.
 </Callout>
 
 ## Next

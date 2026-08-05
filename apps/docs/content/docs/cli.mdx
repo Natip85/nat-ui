@@ -21,6 +21,12 @@ Options
   -h, --help           Show this message
 ```
 
+`--yes` and `--overwrite` are not two ways of saying the same thing. `--yes`
+takes every default, and the default for a file you already have is to keep it,
+so `--yes` answers _no_ to the overwrite question. `--overwrite` is what answers
+yes. [Replacing files you have already
+edited](#replacing-files-you-have-already-edited) has the details.
+
 ## `init`
 
 Covered in [Installation](/docs/installation). It takes `--yes` and nothing
@@ -41,14 +47,19 @@ Naming a component pulls in whatever it depends on, so `add dialog` also writes
 
 ### Replacing files you have already edited
 
-`add` will not overwrite an existing file without asking. When it cannot ask,
-because stdin is not a TTY, it declines and leaves the file alone. `--overwrite`
-answers yes in advance:
+`add` will not overwrite an existing file without asking. `--overwrite` answers
+yes in advance:
 
 <CliCommand args='add dialog --overwrite' />
 
 This discards local edits to the files it writes. That is the point of the flag,
 but it is worth a clean git tree first.
+
+Every other way of not being asked declines. That covers a non-TTY stdin, and it
+covers `--yes`: adding a component you already have with `add button --yes`
+prints `Left components/ui/button.tsx alone, since it already exists.` and exits
+0 without writing anything. If what you want is an update — in a CI job, say —
+`--overwrite` is the flag to reach for, on its own or alongside `--yes`.
 
 ### Pointing at a different registry
 
