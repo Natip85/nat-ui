@@ -7,6 +7,21 @@ import {demos} from './components/demos/registry'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
+/**
+ * The scaffold leaves two placeholders: `description: TODO` in the frontmatter
+ * and a bare `TODO` under `## API Reference`. Matching a whole line rather than
+ * the word means prose that mentions a TODO in passing still passes, while
+ * either placeholder -- and any other the scaffold grows -- is caught.
+ */
+const PLACEHOLDER = /^(?:description:[ \t]*)?TODO[ \t]*$/m
+
+/** The component name the scaffold derives from a demo key: `input-demo` -> `InputDemo`. */
+const pascalCase = (key: string): string =>
+  key
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')
+
 const documented = async (): Promise<string[]> => {
   const entries = await readdir(join(here, 'content', 'components'))
 
@@ -38,15 +53,30 @@ describe('component documentation coverage', () => {
   })
 
   it('registers no demo for a component that does not exist', () => {
-    // Keys are `<item>-<example>`, so match on the item prefix rather than an
-    // exact name, longest first: `button-group` must win over `button` for a
-    // key like `button-group-vertical`.
-    const names = [...items.map((item) => item.name)].sort((a, b) => b.length - a.length)
+    // Keys are `<item>-<example>`, so this asserts only that a key begins with
+    // some registry item's name: `button-group-vertical` passes on `button-`
+    // whether or not a `button-group` item exists. Which item a key belongs to
+    // is not decided here, and the ordering of `names` cannot affect the answer.
+    const names = items.map((item) => item.name)
     const orphans = Object.keys(demos).filter(
       (demo) => !names.some((name) => demo.startsWith(`${name}-`)),
     )
 
     expect(orphans, 'demos naming a component the registry does not serve').toEqual([])
+  })
+
+  it('pairs every demo key with the component and the file of that name', () => {
+    // Both halves of an entry resolve on their own, so a copy-paste that leaves
+    // `input-demo` rendering `ButtonDemo` builds, renders, and shows the wrong
+    // component above the right source. Function names survive the bundler the
+    // tests run under, so the key can be checked against what it points at.
+    const mismatched = Object.entries(demos)
+      .filter(
+        ([key, {component, file}]) => component.name !== pascalCase(key) || file !== `${key}.tsx`,
+      )
+      .map(([key, {component, file}]) => `${key}: {component: ${component.name}, file: ${file}}`)
+
+    expect(mismatched, 'demo entries whose key, component, and file disagree').toEqual([])
   })
 
   it('registers every demo a page asks for, and no demo no page uses', async () => {
@@ -76,9 +106,9 @@ describe('component documentation coverage', () => {
 
     for (const page of pages) {
       const content = await readFile(join(dir, `${page}.mdx`), 'utf8')
-      if (/^description:\s*TODO\s*$/m.test(content)) unfinished.push(page)
+      if (PLACEHOLDER.test(content)) unfinished.push(page)
     }
 
-    expect(unfinished, 'pages still carrying the scaffold description').toEqual([])
+    expect(unfinished, 'pages still carrying a scaffold TODO placeholder').toEqual([])
   })
 })
