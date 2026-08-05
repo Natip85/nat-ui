@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@nat-ui/registry": "workspace:*",
+    "@nat-ui/schema": "workspace:*",
     "fumadocs-core": "catalog:",
     "fumadocs-mdx": "catalog:",
     "fumadocs-ui": "catalog:",
