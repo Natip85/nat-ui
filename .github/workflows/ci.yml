@@ -107,3 +107,46 @@ jobs:
       # `--fail-if-no-match` because a filter that matches nothing exits 0,
       # which would quietly turn this guard into a no-op that still reports green.
       - run: pnpm --filter @nat-ui/cli --fail-if-no-match run verify-pack
+
+  smoke-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Serve the freshly built registry over HTTP. `add` fetches by URL, so a
+      # file path is not an option.
+      - run: npx --yes serve r --listen 8420 &
+
+      - run: npx --yes wait-on http://localhost:8420/index.json --timeout 30000
+
+      # Outside the workspace on purpose. pnpm gives it an isolated
+      # node_modules containing only what the CLI installed, so an undeclared
+      # dependency fails here as it would for a user.
+      - run: pnpm --package=create-next-app@latest dlx create-next-app consumer
+          --ts --tailwind --app --no-eslint --no-src-dir
+          --import-alias "@/*" --use-pnpm --yes
+        working-directory: ${{ runner.temp }}
+
+      - run: node ${{ github.workspace }}/packages/cli/dist/index.js init --yes
+        working-directory: ${{ runner.temp }}/consumer
+
+      - run: node ${{ github.workspace }}/packages/cli/dist/index.js add button input dialog
+          --registry http://localhost:8420
+        working-directory: ${{ runner.temp }}/consumer
+
+      - run: pnpm build
+        working-directory: ${{ runner.temp }}/consumer
