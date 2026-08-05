@@ -102,6 +102,16 @@ confusing unrecognised-key error.
 
 ## The URL migration is not in this work
 
+> **Superseded on 2026-08-05.** `DEFAULT_REGISTRY_URL` now points at
+> `https://nat-ui-delta.vercel.app/r`. The reasoning below missed that the CLI
+> fetches with `fetch`, which follows redirects, so pointing the Vercel project
+> at a real domain later keeps these installs working without a second
+> migration. What has to outlive every other decision is therefore not the
+> hostname but the Vercel project keeping its name: renaming or deleting it
+> strands those clients, because nothing redirects from the old subdomain. The
+> conclusion about the committed `r/` was right and still holds — it is what
+> keeps 0.1.0 and 0.2.0 working. See `packages/cli/src/registry/base-url.ts`.
+
 There is no domain yet. The site will deploy to a Vercel hobby project under a
 `.vercel.app` hostname until a real domain is bought.
 
