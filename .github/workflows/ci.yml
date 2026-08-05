@@ -129,9 +129,17 @@ jobs:
 
       # Serve the freshly built registry over HTTP. `add` fetches by URL, so a
       # file path is not an option.
-      - run: npx --yes serve r --listen 8420 &
-
-      - run: npx --yes wait-on http://localhost:8420/index.json --timeout 30000
+      #
+      # One step, not two: `&` makes a step exit 0 whatever the server did, so a
+      # startup failure would surface half a minute later as a `wait-on` timeout
+      # explaining nothing. Waiting here reports it where it happened, and the
+      # log is on disk to read. Redirecting stdout also matters on its own — a
+      # step ends when its stdout pipe closes, so a background process holding
+      # that pipe open can hang the job.
+      - run: |
+          npx --yes serve r --listen 8420 > "$RUNNER_TEMP/serve.log" 2>&1 < /dev/null &
+          npx --yes wait-on http://localhost:8420/index.json --timeout 30000 ||
+            { cat "$RUNNER_TEMP/serve.log"; exit 1; }
 
       # Outside the workspace on purpose. pnpm gives it an isolated
       # node_modules containing only what the CLI installed, so an undeclared

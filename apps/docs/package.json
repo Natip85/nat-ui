@@ -4,8 +4,9 @@
   "description": "The nat-ui documentation site.",
   "type": "module",
   "private": true,
+  "//": "build regenerates the registry first, because public/r/ is generated rather than committed and this site serves it: a deploy that skipped it would serve a stale or missing registry. The filter's trailing ... adds the packages the registry depends on, and --fail-if-no-match keeps a rename from turning the step into a silent no-op.",
   "scripts": {
-    "build": "next build",
+    "build": "pnpm --filter @nat-ui/registry... --fail-if-no-match build && next build",
     "dev": "next dev",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit"
