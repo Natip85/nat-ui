@@ -68,6 +68,31 @@ TODO
   ]
 }
 
+export const manualInstructions = (name: string): string => {
+  const componentName = toTitle(name).replace(/ /g, '')
+
+  return `
+Add this import to apps/docs/components/demos/registry.ts:
+
+  import {${componentName}Demo} from './${name}-demo'
+
+Add this entry to the \`demos\` map in apps/docs/components/demos/registry.ts:
+
+  '${name}-demo': {component: ${componentName}Demo, file: '${name}-demo.tsx'},
+
+Add this to the \`items\` array in packages/registry/src/index.ts:
+
+  {
+    name: '${name}',
+    type: 'ui',
+    dependencies: ['@base-ui/react'],
+    files: [{path: 'components/ui/${name}.tsx', type: 'ui'}],
+  },
+
+Then replace the TODO description in apps/docs/content/components/${name}.mdx
+and run \`pnpm build\` to regenerate r/.`
+}
+
 const exists = async (path: string): Promise<boolean> => {
   try {
     await access(path)
@@ -97,20 +122,9 @@ const main = async (): Promise<void> => {
     console.log(`Wrote ${file.path}`)
   }
 
-  // Printed rather than written. index.ts is hand-ordered, and a scaffold that
-  // edits source is one that eventually corrupts it.
-  console.log(`
-Add this to the \`items\` array in packages/registry/src/index.ts:
-
-  {
-    name: '${name}',
-    type: 'ui',
-    dependencies: ['@base-ui/react'],
-    files: [{path: 'components/ui/${name}.tsx', type: 'ui'}],
-  },
-
-Then replace the TODO description in apps/docs/content/components/${name}.mdx
-and run \`pnpm build\` to regenerate r/.`)
+  // Both maps are hand-ordered, so the scaffold prints the required entries
+  // instead of creating edits that could silently land in the wrong place.
+  console.log(manualInstructions(name))
 }
 
 // Only run when invoked as a script, so the tests can import the pure

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest'
-import {componentFiles, toTitle} from './new-component'
+import {componentFiles, manualInstructions, toTitle} from './new-component'
 
 describe('toTitle', () => {
   it('capitalises a single word', () => {
@@ -42,5 +42,13 @@ describe('componentFiles', () => {
 
   it('rejects a name the registry schema would refuse', () => {
     expect(() => componentFiles('Checkbox')).toThrow(/lowercase/)
+  })
+})
+
+describe('manualInstructions', () => {
+  it('tells the author how to register the generated demo', () => {
+    expect(manualInstructions('checkbox')).toContain(
+      "import {CheckboxDemo} from './checkbox-demo'\n\nAdd this entry to the `demos` map in apps/docs/components/demos/registry.ts:\n\n  'checkbox-demo': {component: CheckboxDemo, file: 'checkbox-demo.tsx'},",
+    )
   })
 })
