@@ -48,12 +48,19 @@ export function ButtonAnimation() {
         })}
       </div>
 
+      {/* Keyboard handlers alongside pointer ones: a press you can only reach
+          with a mouse leaves keyboard users with three static rectangles. */}
       <Button
+        onBlur={release}
+        onKeyDown={(event) => {
+          if (event.key === ' ' || event.key === 'Enter') setPressed(true)
+        }}
+        onKeyUp={release}
         onPointerDown={() => {
           setPressed(true)
         }}
-        onPointerUp={release}
         onPointerLeave={release}
+        onPointerUp={release}
       >
         Hold to press all three
       </Button>
