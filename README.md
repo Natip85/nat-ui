@@ -23,7 +23,7 @@ npx @nat-ui/cli@latest add button
 `init` configures a project in one pass and writes `components.json`. `add`
 reads that config, so components land where you already keep things, with
 imports rewritten to your aliases. Naming a component pulls in whatever it
-depends on.
+depends on, so `add button` also writes the shared `motion` module.
 
 Available components: `button`.
 
