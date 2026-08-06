@@ -1,6 +1,7 @@
 export interface RewriteAliases {
   readonly ui: string
   readonly utils: string
+  readonly lib: string
 }
 
 /**
@@ -14,18 +15,23 @@ export interface RewriteAliases {
 const SPECIFIER = /(\bfrom\s*|\bimport\s*)(['"])(@\/[^'"]*)\2/g
 
 const UI_PREFIX = '@/components/ui/'
+const LIB_PREFIX = '@/lib/'
 
 const stripTrailingSlashes = (path: string): string => path.replace(/\/+$/, '')
 
-const joinUiAlias = (ui: string, rest: string): string => {
-  const base = stripTrailingSlashes(ui)
-  return `${base}/${rest}`
-}
+const joinAlias = (alias: string, rest: string): string => `${stripTrailingSlashes(alias)}/${rest}`
 
+/**
+ * `@/lib/utils` is checked before the `@/lib/` prefix on purpose. It is the one
+ * lib file the project already owns before any component is added, so it has
+ * its own configured alias rather than living wherever `lib` points.
+ */
 const rewriteSpecifier = (specifier: string, aliases: RewriteAliases): string | undefined => {
   if (specifier === '@/lib/utils') return stripTrailingSlashes(aliases.utils)
   if (specifier.startsWith(UI_PREFIX))
-    return joinUiAlias(aliases.ui, specifier.slice(UI_PREFIX.length))
+    return joinAlias(aliases.ui, specifier.slice(UI_PREFIX.length))
+  if (specifier.startsWith(LIB_PREFIX))
+    return joinAlias(aliases.lib, specifier.slice(LIB_PREFIX.length))
 
   // The generator refuses to publish any other `@/` shape, so reaching here
   // means a hand-edited document. Leaving it be is better than guessing.

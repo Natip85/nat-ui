@@ -133,6 +133,7 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
       const rewritten = rewriteImports(file.content, {
         ui: config.aliases.ui,
         utils: config.aliases.utils,
+        lib: config.aliases.lib ?? config.aliases.utils,
       })
 
       planned.push({

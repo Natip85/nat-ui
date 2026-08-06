@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'vitest'
 import {rewriteImports} from './rewrite-imports'
 
-const aliases = {ui: '~/ui', utils: '~/helpers/cn'}
+const aliases = {ui: '~/ui', utils: '~/helpers/cn', lib: '~/lib'}
 
 describe('rewriteImports', () => {
   test('rewrites the utils import to the configured alias', () => {
@@ -57,7 +57,9 @@ describe('rewriteImports', () => {
   test('is a no-op when the project uses the same aliases', () => {
     const source = "import {cn} from '@/lib/utils'\n"
 
-    expect(rewriteImports(source, {ui: '@/components/ui', utils: '@/lib/utils'})).toBe(source)
+    expect(
+      rewriteImports(source, {ui: '@/components/ui', utils: '@/lib/utils', lib: '@/lib'}),
+    ).toBe(source)
   })
 
   test('rewrites a rewritable import but leaves an unknown @/ specifier untouched', () => {
@@ -96,7 +98,7 @@ describe('rewriteImports', () => {
 
   test('normalizes a trailing slash on the ui alias', () => {
     const source = "import {buttonVariants} from '@/components/ui/button'\n"
-    const trailingSlashAliases = {ui: '~/ui/', utils: '~/helpers/cn'}
+    const trailingSlashAliases = {ui: '~/ui/', utils: '~/helpers/cn', lib: '~/lib'}
 
     expect(rewriteImports(source, trailingSlashAliases)).toBe(
       "import {buttonVariants} from '~/ui/button'\n",
@@ -105,7 +107,7 @@ describe('rewriteImports', () => {
 
   test('normalizes multiple trailing slashes on the ui alias', () => {
     const source = "import {buttonVariants} from '@/components/ui/button'\n"
-    const multiSlashAliases = {ui: '~/ui///', utils: '~/helpers/cn'}
+    const multiSlashAliases = {ui: '~/ui///', utils: '~/helpers/cn', lib: '~/lib'}
 
     expect(rewriteImports(source, multiSlashAliases)).toBe(
       "import {buttonVariants} from '~/ui/button'\n",
@@ -114,7 +116,7 @@ describe('rewriteImports', () => {
 
   test('normalizes a trailing slash on the utils alias', () => {
     const source = "import {cn} from '@/lib/utils'\n"
-    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn/'}
+    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn/', lib: '~/lib'}
 
     expect(rewriteImports(source, trailingSlashAliases)).toBe("import {cn} from '~/helpers/cn'\n")
   })
@@ -125,5 +127,44 @@ describe('rewriteImports', () => {
     expect(rewriteImports(source, aliases)).toBe(
       "// import x from '~/helpers/cn'\nimport {cn} from '~/helpers/cn'\n",
     )
+  })
+
+  test('rewrites a lib import to the configured lib alias', () => {
+    const source = "import {SPRINGS} from '@/lib/motion'\n"
+
+    expect(rewriteImports(source, aliases)).toBe("import {SPRINGS} from '~/lib/motion'\n")
+  })
+
+  test('still treats @/lib/utils as the utils alias, not the lib alias', () => {
+    const source = "import {cn} from '@/lib/utils'\n"
+
+    expect(rewriteImports(source, aliases)).toBe("import {cn} from '~/helpers/cn'\n")
+  })
+
+  test('rewrites lib and utils imports in the same file', () => {
+    const source = [
+      "import {cn} from '@/lib/utils'",
+      "import {SPRINGS} from '@/lib/motion'",
+      '',
+    ].join('\n')
+
+    expect(rewriteImports(source, aliases)).toBe(
+      ["import {cn} from '~/helpers/cn'", "import {SPRINGS} from '~/lib/motion'", ''].join('\n'),
+    )
+  })
+
+  test('normalizes a trailing slash on the lib alias', () => {
+    const source = "import {SPRINGS} from '@/lib/motion'\n"
+    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn', lib: '~/lib//'}
+
+    expect(rewriteImports(source, trailingSlashAliases)).toBe(
+      "import {SPRINGS} from '~/lib/motion'\n",
+    )
+  })
+
+  test('leaves a hooks alias untouched, since nothing installs hook files yet', () => {
+    const source = "import {useThing} from '@/hooks/use-thing'\n"
+
+    expect(rewriteImports(source, aliases)).toBe(source)
   })
 })
