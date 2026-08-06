@@ -38,19 +38,15 @@ silent no-op, because both would suggest a behaviour it does not have.
 <CliCommand args='add button' />
 
 Components are copied into the directory your `components.json` names, with
-imports rewritten to your aliases. Name as many as you like at once:
-
-<CliCommand args='add button input dialog' />
-
-Naming a component pulls in whatever it depends on, so `add dialog` also writes
-`button` — the dialog's close control is styled with `buttonVariants`.
+imports rewritten to your aliases. You can name several at once, and naming a
+component pulls in whatever it depends on.
 
 ### Replacing files you have already edited
 
 `add` will not overwrite an existing file without asking. `--overwrite` answers
 yes in advance:
 
-<CliCommand args='add dialog --overwrite' />
+<CliCommand args='add button --overwrite' />
 
 This discards local edits to the files it writes. That is the point of the flag,
 but it is worth a clean git tree first.

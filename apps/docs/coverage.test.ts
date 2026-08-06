@@ -8,6 +8,13 @@ import {demos} from './components/demos/registry'
 const here = dirname(fileURLToPath(import.meta.url))
 
 /**
+ * Only `ui` items appear on the site. A `lib` item like `motion` is something
+ * components depend on rather than something a page documents; the guides
+ * cover it in prose instead.
+ */
+const components = items.filter((item) => item.type === 'ui')
+
+/**
  * The scaffold leaves two placeholders: `description: TODO` in the frontmatter
  * and a bare `TODO` under `## API Reference`. Matching a whole line rather than
  * the word means prose that mentions a TODO in passing still passes, while
@@ -34,20 +41,20 @@ const documented = async (): Promise<string[]> => {
 describe('component documentation coverage', () => {
   it('documents every registry item', async () => {
     const pages = new Set(await documented())
-    const missing = items.map((item) => item.name).filter((name) => !pages.has(name))
+    const missing = components.map((item) => item.name).filter((name) => !pages.has(name))
 
     expect(missing, 'registry items with no page under content/components').toEqual([])
   })
 
   it('documents nothing that is not a registry item', async () => {
-    const names = new Set(items.map((item) => item.name))
+    const names = new Set(components.map((item) => item.name))
     const orphans = (await documented()).filter((page) => !names.has(page))
 
     expect(orphans, 'pages naming a component the registry does not serve').toEqual([])
   })
 
   it('registers a demo for every registry item', () => {
-    const missing = items.map((item) => `${item.name}-demo`).filter((demo) => !(demo in demos))
+    const missing = components.map((item) => `${item.name}-demo`).filter((demo) => !(demo in demos))
 
     expect(missing, 'registry items with no entry in the demo map').toEqual([])
   })
@@ -57,7 +64,7 @@ describe('component documentation coverage', () => {
     // some registry item's name: `button-group-vertical` passes on `button-`
     // whether or not a `button-group` item exists. Which item a key belongs to
     // is not decided here, and the ordering of `names` cannot affect the answer.
-    const names = items.map((item) => item.name)
+    const names = components.map((item) => item.name)
     const orphans = Object.keys(demos).filter(
       (demo) => !names.some((name) => demo.startsWith(`${name}-`)),
     )

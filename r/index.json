@@ -6,12 +6,8 @@
       "type": "ui"
     },
     {
-      "name": "dialog",
-      "type": "ui"
-    },
-    {
-      "name": "input",
-      "type": "ui"
+      "name": "motion",
+      "type": "lib"
     }
   ]
 }

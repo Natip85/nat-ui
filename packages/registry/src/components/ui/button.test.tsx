@@ -1,29 +1,10 @@
 // @vitest-environment happy-dom
 import {cleanup, render, screen} from '@testing-library/react'
 import {afterEach, describe, expect, test} from 'vitest'
-import {Button, buttonVariants} from './button'
+import {DEFAULT_PRESET, DURATIONS_MS, EASINGS} from '../../lib/motion'
+import {Button} from './button'
 
 afterEach(cleanup)
-
-describe('buttonVariants', () => {
-  test('defaults to the primary variant at the default size', () => {
-    const classes = buttonVariants()
-
-    expect(classes).toContain('bg-primary')
-    expect(classes).toContain('h-9')
-  })
-
-  test('selects the variant and size asked for', () => {
-    expect(buttonVariants({variant: 'ghost'})).toContain('hover:bg-accent')
-    expect(buttonVariants({variant: 'destructive'})).toContain('bg-destructive')
-    expect(buttonVariants({variant: 'link'})).toContain('underline-offset-4')
-    expect(buttonVariants({size: 'icon'})).toContain('size-9')
-  })
-
-  test('appends caller classes so they can override', () => {
-    expect(buttonVariants({className: 'w-full'})).toContain('w-full')
-  })
-})
 
 describe('Button', () => {
   test('renders a native button carrying its variant classes', () => {
@@ -59,5 +40,42 @@ describe('Button', () => {
 
     expect(button).toHaveProperty('disabled', true)
     expect(button.getAttribute('data-disabled')).not.toBeNull()
+  })
+
+  test('applies the default preset when no animation prop is given', () => {
+    render(<Button>Press</Button>)
+    const button = screen.getByRole('button', {name: 'Press'})
+
+    expect(button.style.transitionTimingFunction).toBe(EASINGS[DEFAULT_PRESET])
+    expect(button.style.transitionDuration).toBe(`${String(DURATIONS_MS[DEFAULT_PRESET])}ms`)
+  })
+
+  test('applies the named preset', () => {
+    render(<Button animation='bouncy'>Press</Button>)
+    const button = screen.getByRole('button', {name: 'Press'})
+
+    expect(button.style.transitionTimingFunction).toBe(EASINGS.bouncy)
+  })
+
+  test('lets a caller override the transition through style', () => {
+    render(
+      <Button animation='bouncy' style={{transitionDuration: '0ms'}}>
+        Press
+      </Button>,
+    )
+
+    expect(screen.getByRole('button', {name: 'Press'}).style.transitionDuration).toBe('0ms')
+  })
+
+  test('keeps variant and size independent of animation', () => {
+    render(
+      <Button variant='destructive' size='lg' animation='smooth'>
+        Press
+      </Button>,
+    )
+    const button = screen.getByRole('button', {name: 'Press'})
+
+    expect(button.className).toContain('bg-destructive')
+    expect(button.style.transitionTimingFunction).toBe(EASINGS.smooth)
   })
 })

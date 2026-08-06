@@ -6,7 +6,7 @@ import {installCommand, type PackageManager} from '../detect/package-manager'
 import {detectProject, toPosixPath} from '../detect/project'
 import {atomicWriteFile} from '../fs/atomic-write'
 import {readText} from '../fs/read-text'
-import {aliasBaseDir, aliasPrefixOf, aliasToPath, isWithinRoot} from '../paths/alias'
+import {aliasBaseDir, aliasDirOf, aliasPrefixOf, aliasToPath, isWithinRoot} from '../paths/alias'
 import {resolveBaseUrl} from '../registry/base-url'
 import {fetchIndex, fetchItem, type FetchJson} from '../registry/fetch-item'
 import {assertValidItemName} from '../registry/item-name'
@@ -101,19 +101,32 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   }
 
   const detected = await detectProject(io.cwd, io.env)
-  const prefix = aliasPrefixOf(config.aliases.ui)
-  const baseDir = aliasBaseDir(io.cwd, detected.aliasTargets, prefix, config.tailwind.css)
-  const uiDir = isAbsolute(config.aliases.ui)
-    ? config.aliases.ui
-    : aliasToPath(config.aliases.ui, prefix, baseDir)
+
+  const resolveAliasDir = (alias: string): string => {
+    if (isAbsolute(alias)) return alias
+    const prefix = aliasPrefixOf(alias)
+
+    return aliasToPath(
+      alias,
+      prefix,
+      aliasBaseDir(io.cwd, detected.aliasTargets, prefix, config.tailwind.css),
+    )
+  }
+
+  const uiDir = resolveAliasDir(config.aliases.ui)
+  // Every config carries `utils`; `lib` is optional and absent from any
+  // components.json written before lib items existed, so the directory holding
+  // `utils` is the fallback rather than a hard-coded path.
+  const libAlias = config.aliases.lib ?? aliasDirOf(config.aliases.utils)
+  const libDir = resolveAliasDir(libAlias)
 
   const planned: PlannedFile[] = []
   const destinationItems = new Map<string, string>()
   for (const item of items) {
     for (const file of item.files) {
-      if (file.type !== 'ui') {
+      if (file.type !== 'ui' && file.type !== 'lib') {
         io.log(
-          `The add command only installs ui components; "${item.name}" includes a ${file.type} file.`,
+          `The add command only installs ui and lib files; "${item.name}" includes a ${file.type} file.`,
         )
 
         return 1
@@ -121,7 +134,8 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
 
       // Only the basename matters: the directory in the document is the
       // registry's own layout, not a structure to reproduce in someone's app.
-      const relative = toPosixPath(join(uiDir, basename(toPosixPath(file.path))))
+      const targetDir = file.type === 'ui' ? uiDir : libDir
+      const relative = toPosixPath(join(targetDir, basename(toPosixPath(file.path))))
       const priorItem = destinationItems.get(relative)
       if (priorItem !== undefined) {
         io.log(`Adding "${priorItem}" and "${item.name}" would both write to ${relative}.`)
@@ -133,6 +147,7 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
       const rewritten = rewriteImports(file.content, {
         ui: config.aliases.ui,
         utils: config.aliases.utils,
+        lib: libAlias,
       })
 
       planned.push({
@@ -146,7 +161,7 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   for (const file of planned) {
     if (!isWithinRoot(io.cwd, file.absolute)) {
       io.log(
-        `${config.aliases.ui} resolves to ${file.relative} outside the project. Choose a ui alias inside the project root.`,
+        `An alias resolves to ${file.relative} outside the project. Choose aliases inside the project root.`,
       )
 
       return 1
@@ -166,9 +181,11 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   }
 
   const written: string[] = []
+  const skipped: string[] = []
   try {
     for (const file of planned) {
       if (!overwrite && existing.includes(file.relative)) {
+        skipped.push(file.relative)
         io.log(`Left ${file.relative} alone, since it already exists.`)
         continue
       }
@@ -191,6 +208,16 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
     }
 
     return 1
+  }
+
+  // A component is now more than one file, so keeping an old copy of one of
+  // them while taking new copies of the rest leaves a set that does not agree
+  // with itself. Worth saying plainly, because every individual line above
+  // reads like success.
+  if (skipped.length > 0 && written.length > 0) {
+    io.log(
+      `Kept ${skipped.join(', ')} but wrote ${written.join(', ')}, so these files come from different versions. Run add again with --overwrite to take the whole set.`,
+    )
   }
 
   const packages = [...new Set(items.flatMap((item) => item.dependencies ?? []))].sort()

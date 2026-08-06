@@ -10,23 +10,22 @@ import {REGISTRY_SCHEMA_VERSION, type RegistryItem} from '@nat-ui/schema'
  */
 export const items: readonly RegistryItem[] = [
   {
+    name: 'motion',
+    type: 'lib',
+    files: [
+      {path: 'lib/motion.ts', type: 'lib'},
+      {path: 'lib/use-motion.ts', type: 'lib'},
+    ],
+  },
+  {
     name: 'button',
     type: 'ui',
     dependencies: ['@base-ui/react', 'class-variance-authority'],
-    files: [{path: 'components/ui/button.tsx', type: 'ui'}],
-  },
-  {
-    name: 'dialog',
-    type: 'ui',
-    dependencies: ['@base-ui/react', 'lucide-react'],
-    registryDependencies: ['button'],
-    files: [{path: 'components/ui/dialog.tsx', type: 'ui'}],
-  },
-  {
-    name: 'input',
-    type: 'ui',
-    dependencies: ['@base-ui/react'],
-    files: [{path: 'components/ui/input.tsx', type: 'ui'}],
+    registryDependencies: ['motion'],
+    files: [
+      {path: 'components/ui/button.tsx', type: 'ui'},
+      {path: 'components/ui/button-variants.tsx', type: 'ui'},
+    ],
   },
 ]
 

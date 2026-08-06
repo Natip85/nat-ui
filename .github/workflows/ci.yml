@@ -152,8 +152,7 @@ jobs:
       - run: node ${{ github.workspace }}/packages/cli/dist/index.js init --yes
         working-directory: ${{ runner.temp }}/consumer
 
-      - run: node ${{ github.workspace }}/packages/cli/dist/index.js add button input dialog
-          --registry http://localhost:8420
+      - run: node ${{ github.workspace }}/packages/cli/dist/index.js add button --registry http://localhost:8420
         working-directory: ${{ runner.temp }}/consumer
 
       # Next only compiles files a route reaches, so import installed components
@@ -161,27 +160,11 @@ jobs:
       - run: |
           cat <<'EOF' > app/page.tsx
           import {Button} from '@/components/ui/button'
-          import {
-            Dialog,
-            DialogContent,
-            DialogDescription,
-            DialogTitle,
-            DialogTrigger,
-          } from '@/components/ui/dialog'
-          import {Input} from '@/components/ui/input'
 
           export default function Home() {
             return (
               <main>
                 <Button>Save</Button>
-                <Input aria-label='Name' />
-                <Dialog>
-                  <DialogTrigger render={<Button>Open</Button>} />
-                  <DialogContent>
-                    <DialogTitle>Settings</DialogTitle>
-                    <DialogDescription>Update your preferences.</DialogDescription>
-                  </DialogContent>
-                </Dialog>
               </main>
             )
           }

@@ -58,13 +58,47 @@ meaning and there is no text for a screen reader to announce.
 
 <ComponentPreview name='button-disabled' />
 
+## Animation
+
+Every nat-ui component takes an `animation` prop. It is independent of
+`variant` and `size`, so appearance and feel vary separately.
+
+<ComponentPreview name='button-animation' />
+
 ## API Reference
 
-| Prop      | Values                                                            | Default   |
-| --------- | ----------------------------------------------------------------- | --------- |
-| `variant` | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
-| `size`    | `sm`, `default`, `lg`, `icon`                                     | `default` |
+| Prop        | Values                                                            | Default   |
+| ----------- | ----------------------------------------------------------------- | --------- |
+| `variant`   | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
+| `size`      | `sm`, `default`, `lg`, `icon`                                     | `default` |
+| `animation` | `smooth`, `snappy`, `bouncy`, `none`                              | `snappy`  |
 
 Every other prop is forwarded to Base UI's `Button`. `className` is narrowed to
 a string: Base UI also accepts a function of the component's state, but the
 variants here decide their classes without it.
+
+`buttonVariants` lives in its own `button-variants.tsx`, not `button.tsx`.
+`Button` needs `'use client'` for the `animation` prop's hooks, and that
+directive makes every export of the module a client reference — so a plain
+class-name function like `buttonVariants` has to sit somewhere a Server
+Component can still call it directly, such as to style a `<Link>` as a
+button.
+
+```tsx
+import {buttonVariants} from '@/components/ui/button-variants'
+```
+
+`buttonVariants` carries the press scale but not the timing that turns it into
+a press rather than a jump, since that timing is what the `animation` prop
+picks. Ask for a preset directly to match it:
+
+```tsx
+import {buttonVariants} from '@/components/ui/button-variants'
+import {transitionStyle} from '@/lib/motion'
+;<Link href='/docs' className={buttonVariants()} style={transitionStyle('snappy')}>
+  Get started
+</Link>
+```
+
+This works in a Server Component. `lib/motion.ts` holds the presets and carries
+no directive; the reduced-motion hooks live in `lib/use-motion.ts`, which does.

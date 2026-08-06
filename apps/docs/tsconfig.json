@@ -22,6 +22,12 @@
       "@/lib/utils": [
         "../../packages/registry/src/lib/utils.ts"
       ],
+      "@/lib/motion": [
+        "../../packages/registry/src/lib/motion.ts"
+      ],
+      "@/lib/use-motion": [
+        "../../packages/registry/src/lib/use-motion.ts"
+      ],
       "@/components/ui/*": [
         "../../packages/registry/src/components/ui/*.tsx"
       ],
