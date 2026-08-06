@@ -23,9 +23,9 @@ npx @nat-ui/cli@latest add button
 `init` configures a project in one pass and writes `components.json`. `add`
 reads that config, so components land where you already keep things, with
 imports rewritten to your aliases. Naming a component pulls in whatever it
-depends on, so `add dialog` also writes `button`.
+depends on.
 
-Available components: `button`, `input`, `dialog`.
+Available components: `button`.
 
 The site covers the rest:
 [installation](https://nat-ui-delta.vercel.app/docs/installation),
