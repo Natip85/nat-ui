@@ -395,6 +395,22 @@ describe('add', () => {
     expect(await read('src/lib/motion.ts')).toBe(motionSource)
   })
 
+  test('installs a lib item beside a single-segment utils alias', async () => {
+    // `@/utils` leaves nothing but the prefix once the file name is stripped,
+    // so the lib directory is the alias root. Getting this wrong wrote to a
+    // directory named `@` and still reported success.
+    await writeFile(
+      join(cwd, CONFIG_FILE_NAME),
+      JSON.stringify({...config, aliases: {...config.aliases, utils: '@/utils'}}),
+    )
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['motion']}))
+
+    expect(code).toBe(0)
+    expect(await read('src/motion.ts')).toBe(motionSource)
+  })
+
   test('installs a lib item into an explicit lib alias when the config has one', async () => {
     await writeFile(
       join(cwd, CONFIG_FILE_NAME),

@@ -39,6 +39,14 @@ describe('aliasToPath', () => {
   test('leaves an alias that does not carry the prefix alone', () => {
     expect(aliasToPath('components/ui', '@', 'src')).toBe(join('src', 'components', 'ui'))
   })
+
+  test('reads a bare prefix as the base directory itself', () => {
+    // What `aliasDirOf` returns for a single-segment alias such as `@/utils`.
+    // Joining the prefix on as a segment would write files into a directory
+    // named `@`, and `add` would report success while the rewritten import
+    // pointed at nothing.
+    expect(aliasToPath('@', '@', 'src')).toBe('src')
+  })
 })
 
 describe('aliasBaseDir', () => {

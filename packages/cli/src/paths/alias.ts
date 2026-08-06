@@ -24,8 +24,18 @@ export const aliasPrefixOf = (alias: string): string => {
   return slash === -1 ? alias : alias.slice(0, slash)
 }
 
-/** `@/components/ui` with prefix `@` and a paths target rooted at `src` → `src/components/ui`. */
+/**
+ * `@/components/ui` with prefix `@` and a paths target rooted at `src` →
+ * `src/components/ui`.
+ *
+ * An alias that is nothing but its own prefix names the base directory itself.
+ * `aliasDirOf` produces exactly that for a single-segment alias like
+ * `@/utils`, and treating the prefix as a path segment would put files in a
+ * directory literally called `@`.
+ */
 export const aliasToPath = (alias: string, prefix: string, baseDir: string): string => {
+  if (alias === prefix) return join(baseDir)
+
   const withoutPrefix = alias.startsWith(`${prefix}/`) ? alias.slice(prefix.length + 1) : alias
 
   return join(baseDir, withoutPrefix)
