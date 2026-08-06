@@ -870,6 +870,15 @@ Expected: FAIL — cannot resolve `./motion`.
 
 Create `packages/registry/src/lib/motion.ts`:
 
+> Superseded during review. The directive below is wrong: it makes every export
+> a client reference, so a Server Component cannot call `transitionStyle` or
+> read `EASINGS`. Removing it alone is not enough either — Next refuses to let a
+> Server Component import any module that so much as imports `useState`. What
+> shipped splits the two: `lib/motion.ts` keeps the presets and carries no
+> directive, and `lib/use-motion.ts` holds the reduced-motion hooks and does.
+> The spring constants below are also the pre-rescale values; see Global
+> Constraints.
+
 ```ts
 'use client'
 

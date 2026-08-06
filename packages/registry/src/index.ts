@@ -12,7 +12,10 @@ export const items: readonly RegistryItem[] = [
   {
     name: 'motion',
     type: 'lib',
-    files: [{path: 'lib/motion.ts', type: 'lib'}],
+    files: [
+      {path: 'lib/motion.ts', type: 'lib'},
+      {path: 'lib/use-motion.ts', type: 'lib'},
+    ],
   },
   {
     name: 'button',

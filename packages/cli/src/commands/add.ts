@@ -181,9 +181,11 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   }
 
   const written: string[] = []
+  const skipped: string[] = []
   try {
     for (const file of planned) {
       if (!overwrite && existing.includes(file.relative)) {
+        skipped.push(file.relative)
         io.log(`Left ${file.relative} alone, since it already exists.`)
         continue
       }
@@ -206,6 +208,16 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
     }
 
     return 1
+  }
+
+  // A component is now more than one file, so keeping an old copy of one of
+  // them while taking new copies of the rest leaves a set that does not agree
+  // with itself. Worth saying plainly, because every individual line above
+  // reads like success.
+  if (skipped.length > 0 && written.length > 0) {
+    io.log(
+      `Kept ${skipped.join(', ')} but wrote ${written.join(', ')}, so these files come from different versions. Run add again with --overwrite to take the whole set.`,
+    )
   }
 
   const packages = [...new Set(items.flatMap((item) => item.dependencies ?? []))].sort()

@@ -12,6 +12,7 @@
     "./registry": "./src/index.ts",
     "./components/ui/*": "./src/components/ui/*.tsx",
     "./lib/motion": "./src/lib/motion.ts",
+    "./lib/use-motion": "./src/lib/use-motion.ts",
     "./lib/utils": "./src/lib/utils.ts"
   },
   "dependencies": {

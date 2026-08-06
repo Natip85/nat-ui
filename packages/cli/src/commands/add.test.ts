@@ -555,4 +555,25 @@ describe('add', () => {
     expect(confirmOverwrite).toHaveBeenCalledTimes(1)
     expect(await read('src/components/ui/button.tsx')).toBe('mine\n')
   })
+
+  test('warns when it keeps one file of a set and writes the rest', async () => {
+    await mkdir(join(cwd, 'src/components/ui'), {recursive: true})
+    await writeFile(join(cwd, 'src/components/ui/springy.tsx'), 'mine\n')
+
+    const io = makeIo()
+    const code = await add(io, options({names: ['springy'], yes: true}))
+
+    expect(code).toBe(0)
+    expect(await read('src/components/ui/springy.tsx')).toBe('mine\n')
+    expect(await read('src/lib/motion.ts')).toBe(motionSource)
+    expect(io.logs.join('\n')).toMatch(/different versions/)
+  })
+
+  test('says nothing about versions when nothing was kept', async () => {
+    const io = makeIo()
+
+    await add(io, options({names: ['springy']}))
+
+    expect(io.logs.join('\n')).not.toMatch(/different versions/)
+  })
 })

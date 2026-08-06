@@ -4,12 +4,8 @@ import {Button as BaseButton} from '@base-ui/react/button'
 import type {VariantProps} from 'class-variance-authority'
 import type {ComponentProps} from 'react'
 import {buttonVariants} from '@/components/ui/button-variants'
-import {
-  type AnimationPreset,
-  DEFAULT_PRESET,
-  transitionStyle,
-  useResolvedPreset,
-} from '@/lib/motion'
+import {type AnimationPreset, DEFAULT_PRESET, transitionStyle} from '@/lib/motion'
+import {useResolvedPreset} from '@/lib/use-motion'
 import {cn} from '@/lib/utils'
 
 /**

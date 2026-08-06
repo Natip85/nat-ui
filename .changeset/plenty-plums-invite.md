@@ -20,3 +20,10 @@ class-name function that Server Components need to call directly (for example,
 to style a `<Link>` as a button). Splitting it out is what makes that call
 possible again. If your project already has `button`, update your import of
 `buttonVariants` to `@/components/ui/button-variants`.
+
+For the same reason the `motion` item now ships two files. `lib/motion.ts`
+holds the presets, easings and `transitionStyle`, and no longer carries a
+directive, so a Server Component can style a link with the same spring a
+`Button` uses. The reduced-motion hooks moved to `lib/use-motion.ts`, which
+does carry one — a module cannot be imported by a Server Component if it so
+much as imports `useState`.

@@ -1,6 +1,12 @@
-'use client'
+/**
+ * Deliberately free of any runtime React import -- the `CSSProperties` import
+ * below is type-only and compiles away. The reduced-motion hooks live in
+ * `use-motion.ts` instead, because a server component cannot import a module
+ * that pulls in `useState`, and server components do need these presets to
+ * style a `<Link>` that should look and move like a button.
+ */
 
-import {type CSSProperties, useEffect, useState} from 'react'
+import type {CSSProperties} from 'react'
 
 /**
  * The shared motion vocabulary. Every nat-ui component takes an `animation`
@@ -94,41 +100,6 @@ export const DURATIONS_MS: Record<AnimationPreset, number> = {
   bouncy: springResponse(SPRINGS.bouncy).durationMs,
   none: 0,
 }
-
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
-
-/**
- * Read after mount rather than during render, so a server render and the first
- * client render agree. One frame of motion before the preference applies is
- * preferable to a hydration mismatch on every page.
- */
-export const usePrefersReducedMotion = (): boolean => {
-  const [reduced, setReduced] = useState(false)
-
-  useEffect(() => {
-    const query = window.matchMedia(REDUCED_MOTION_QUERY)
-    setReduced(query.matches)
-
-    const onChange = (event: MediaQueryListEvent): void => {
-      setReduced(event.matches)
-    }
-    query.addEventListener('change', onChange)
-
-    return () => {
-      query.removeEventListener('change', onChange)
-    }
-  }, [])
-
-  return reduced
-}
-
-/**
- * The single place the reduced-motion preference is honoured. Components call
- * this instead of reading their `animation` prop directly, so no component can
- * forget.
- */
-export const useResolvedPreset = (preset: AnimationPreset = DEFAULT_PRESET): AnimationPreset =>
-  usePrefersReducedMotion() ? 'none' : preset
 
 /**
  * Inline rather than a stylesheet variable, so a component works the moment it

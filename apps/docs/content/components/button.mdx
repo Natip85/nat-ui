@@ -87,3 +87,18 @@ button.
 ```tsx
 import {buttonVariants} from '@/components/ui/button-variants'
 ```
+
+`buttonVariants` carries the press scale but not the timing that turns it into
+a press rather than a jump, since that timing is what the `animation` prop
+picks. Ask for a preset directly to match it:
+
+```tsx
+import {buttonVariants} from '@/components/ui/button-variants'
+import {transitionStyle} from '@/lib/motion'
+;<Link href='/docs' className={buttonVariants()} style={transitionStyle('snappy')}>
+  Get started
+</Link>
+```
+
+This works in a Server Component. `lib/motion.ts` holds the presets and carries
+no directive; the reduced-motion hooks live in `lib/use-motion.ts`, which does.
