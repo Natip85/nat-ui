@@ -27,12 +27,18 @@ export interface Spring {
  * ratio vary, which is theoretically the "same feel, different character" --
  * and in practice produced three presets nobody could tell apart, because the
  * whole difference amounted to half a pixel on a button. Duration now spans
- * 120ms to 900ms deliberately.
+ * 200ms to 950ms deliberately.
+ *
+ * Nothing sits below ~180ms, because under roughly 150ms the eye stops reading
+ * movement and registers a jump instead -- which is what separates crisp from
+ * abrupt. The damping ratios are also kept high enough that each preset
+ * settles in a few defined oscillations rather than a long tail of tiny ones,
+ * since that tail reads as buzz rather than bounce.
  */
 export const SPRINGS: Record<Exclude<AnimationPreset, 'none'>, Spring> = {
-  smooth: {stiffness: 2425, damping: 98, mass: 1},
-  snappy: {stiffness: 9375, damping: 116, mass: 1},
-  bouncy: {stiffness: 2425, damping: 16, mass: 1},
+  smooth: {stiffness: 1200, damping: 69, mass: 1},
+  snappy: {stiffness: 3775, damping: 80, mass: 1},
+  bouncy: {stiffness: 575, damping: 15, mass: 1},
 }
 
 /**

@@ -198,18 +198,23 @@ generated source.
 
 ### Presets, and why choreography is fixed
 
-| Preset   | Stiffness | Damping | Settles | Presses to | Character                                    |
-| -------- | --------- | ------- | ------- | ---------- | -------------------------------------------- |
-| `smooth` | 2425      | 98      | 285ms   | 0.96       | Zero overshoot                               |
-| `snappy` | 9375      | 116     | 120ms   | 0.94       | Very fast, overshoots once — **the default** |
-| `bouncy` | 2425      | 16      | 901ms   | 0.88       | Fourteen visible oscillations                |
+| Preset   | Stiffness | Damping | Settles | Presses to | Character                               |
+| -------- | --------- | ------- | ------- | ---------- | --------------------------------------- |
+| `smooth` | 1200      | 69      | 387ms   | 0.96       | Zero overshoot                          |
+| `snappy` | 3775      | 80      | 200ms   | 0.94       | Fast, overshoots once — **the default** |
+| `bouncy` | 575       | 15      | 960ms   | 0.88       | Seven defined oscillations              |
 
 Mass is 1 throughout.
 
 An earlier revision of this table held all three to roughly 400ms and varied
 only the damping ratio. Shipped, the three were indistinguishable — see the
 contract below for why that followed from the rule this spec used to state.
-Duration now spans 120ms to 900ms, and press depth varies alongside it.
+Duration now spans 200ms to 960ms, and press depth varies alongside it.
+
+Nothing is tuned below about 180ms. Under roughly 150ms the eye stops reading
+movement and registers a jump instead, which is the line between crisp and
+abrupt. Damping ratios are likewise kept high enough to settle in a few defined
+oscillations rather than a long tail of tiny ones, which reads as buzz.
 
 `none` exists as a fourth value but is not a personality — it is the target
 `prefers-reduced-motion` collapses everything to.

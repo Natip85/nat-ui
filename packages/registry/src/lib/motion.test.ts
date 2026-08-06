@@ -110,8 +110,11 @@ describe('the derived tables', () => {
     // and a fixed-duration CSS transition turns that tail into part of the
     // animation's declared length. The original constants produced 838ms,
     // 658ms and 1575ms, all of which pass every other test in this file.
+    // The lower bound is perceptual, not arbitrary: under roughly 150ms the eye
+    // stops reading movement and registers a jump, which is what makes a preset
+    // feel abrupt rather than crisp.
     for (const preset of Object.keys(SPRINGS) as (keyof typeof SPRINGS)[]) {
-      expect(DURATIONS_MS[preset]).toBeGreaterThan(80)
+      expect(DURATIONS_MS[preset]).toBeGreaterThan(150)
       expect(DURATIONS_MS[preset]).toBeLessThan(1200)
     }
   })
