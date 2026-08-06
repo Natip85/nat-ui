@@ -10,6 +10,11 @@ import {REGISTRY_SCHEMA_VERSION, type RegistryItem} from '@nat-ui/schema'
  */
 export const items: readonly RegistryItem[] = [
   {
+    name: 'motion',
+    type: 'lib',
+    files: [{path: 'lib/motion.ts', type: 'lib'}],
+  },
+  {
     name: 'button',
     type: 'ui',
     dependencies: ['@base-ui/react', 'class-variance-authority'],

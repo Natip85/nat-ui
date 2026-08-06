@@ -4,6 +4,10 @@
     {
       "name": "button",
       "type": "ui"
+    },
+    {
+      "name": "motion",
+      "type": "lib"
     }
   ]
 }

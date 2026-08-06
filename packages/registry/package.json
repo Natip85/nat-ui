@@ -11,6 +11,7 @@
   "exports": {
     "./registry": "./src/index.ts",
     "./components/ui/*": "./src/components/ui/*.tsx",
+    "./lib/motion": "./src/lib/motion.ts",
     "./lib/utils": "./src/lib/utils.ts"
   },
   "dependencies": {
