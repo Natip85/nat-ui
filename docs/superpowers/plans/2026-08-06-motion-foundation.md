@@ -302,8 +302,8 @@ Then replace the opening of `toPayload` (the two type guards) with:
  * `hook`, `block`, and `style` are in the schema for later. Publishing one now
  * would produce a document `add` refuses, so the build stops here instead.
  */
-const INSTALLABLE_ITEM_TYPES = new Set(['ui', 'lib'])
-const INSTALLABLE_FILE_TYPES = new Set(['ui', 'lib'])
+const INSTALLABLE_ITEM_TYPES = new Set<RegistryItemType>(['ui', 'lib'])
+const INSTALLABLE_FILE_TYPES = new Set<RegistryItemFileType>(['ui', 'lib'])
 
 export const toPayload = (
   item: RegistryItem,
