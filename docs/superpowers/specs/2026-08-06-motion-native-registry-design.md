@@ -198,14 +198,23 @@ generated source.
 
 ### Presets, and why choreography is fixed
 
-| Preset   | Stiffness | Damping | Character                                    |
-| -------- | --------- | ------- | -------------------------------------------- |
-| `smooth` | 1080      | 65      | Large travel, zero overshoot                 |
-| `snappy` | 1400      | 43      | Very fast, overshoots once — **the default** |
-| `bouncy` | 5200      | 35      | Several visible oscillations                 |
+| Preset   | Stiffness | Damping | Settles | Presses to | Character                                    |
+| -------- | --------- | ------- | ------- | ---------- | -------------------------------------------- |
+| `smooth` | 2425      | 98      | 285ms   | 0.96       | Zero overshoot                               |
+| `snappy` | 9375      | 116     | 120ms   | 0.94       | Very fast, overshoots once — **the default** |
+| `bouncy` | 2425      | 16      | 901ms   | 0.88       | Fourteen visible oscillations                |
 
-Mass is 1 throughout. These were chosen by feel, in a browser, against live
-demos rather than on paper.
+Mass is 1 throughout.
+
+An earlier revision of this table held all three to roughly 400ms and let only
+the damping ratio vary, on the principle stated below that presets should vary
+physics and never choreography. Shipped, the three were indistinguishable: the
+entire visible difference between `snappy` and `bouncy` came to half a pixel on
+a button. Duration is the cue the eye reads first, so it now spans 120ms to
+900ms; and because overshoot is a proportion of the distance travelled, press
+depth varies with it, or a bounce has nowhere to happen. Choreography is still
+fixed per component — what a press _does_ is unchanged — but its magnitude and
+duration are part of the preset, not fixed against it.
 
 `none` exists as a fourth value but is not a personality — it is the target
 `prefers-reduced-motion` collapses everything to.

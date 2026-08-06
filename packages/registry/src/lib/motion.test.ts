@@ -3,6 +3,8 @@ import {
   DEFAULT_PRESET,
   DURATIONS_MS,
   EASINGS,
+  PRESS_SCALES,
+  pressStyle,
   SPRINGS,
   springResponse,
   toLinearEasing,
@@ -109,8 +111,54 @@ describe('the derived tables', () => {
     // animation's declared length. The original constants produced 838ms,
     // 658ms and 1575ms, all of which pass every other test in this file.
     for (const preset of Object.keys(SPRINGS) as (keyof typeof SPRINGS)[]) {
-      expect(DURATIONS_MS[preset]).toBeGreaterThan(150)
-      expect(DURATIONS_MS[preset]).toBeLessThan(600)
+      expect(DURATIONS_MS[preset]).toBeGreaterThan(80)
+      expect(DURATIONS_MS[preset]).toBeLessThan(1200)
     }
+  })
+
+  test('the presets are far enough apart to tell apart', () => {
+    // A previous tuning put all three within 49ms of each other and let only
+    // the overshoot differ. That is defensible physics and a useless product:
+    // on a button the entire visible difference came to half a pixel, and the
+    // three presets were indistinguishable in the browser. Duration is the cue
+    // the eye actually reads, so it is the one pinned here.
+    expect(DURATIONS_MS.snappy).toBeLessThan(DURATIONS_MS.smooth / 1.5)
+    expect(DURATIONS_MS.bouncy).toBeGreaterThan(DURATIONS_MS.smooth * 2)
+  })
+
+  test('a preset that overshoots more also presses deeper', () => {
+    // Overshoot is a proportion of the distance travelled, so the two have to
+    // move together or the bounce has nothing to happen in.
+    expect(PRESS_SCALES.bouncy).toBeLessThan(PRESS_SCALES.snappy)
+    expect(PRESS_SCALES.snappy).toBeLessThan(PRESS_SCALES.smooth)
+    expect(PRESS_SCALES.none).toBe(1)
+  })
+})
+
+describe('pressStyle', () => {
+  test('carries the preset timing and the press depth together', () => {
+    const style = pressStyle('bouncy') as Record<string, unknown>
+
+    expect(style.transitionDuration).toBe(`${String(DURATIONS_MS.bouncy)}ms`)
+    expect(style.transitionTimingFunction).toBe(EASINGS.bouncy)
+    expect(style['--press-scale']).toBe(PRESS_SCALES.bouncy)
+  })
+
+  test('transitions the scale property, not just transform', () => {
+    // Tailwind's `scale-*` sets the independent `scale` property, which CSS
+    // Transforms Level 2 does not fold into `transform`. Naming only
+    // `transform` here left every preset's press snapping instantly, which is
+    // how three differently tuned springs came to look identical in a browser
+    // while every test in this file passed.
+    const properties = String((pressStyle('bouncy') as Record<string, unknown>).transitionProperty)
+
+    expect(properties.split(', ')).toContain('scale')
+  })
+
+  test('none neither moves nor takes time', () => {
+    const style = pressStyle('none') as Record<string, unknown>
+
+    expect(style.transitionDuration).toBe('0ms')
+    expect(style['--press-scale']).toBe(1)
   })
 })

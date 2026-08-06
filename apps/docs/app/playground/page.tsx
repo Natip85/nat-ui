@@ -1,7 +1,12 @@
 'use client'
 
 import {Button} from '@nat-ui/registry/components/ui/button'
-import {type AnimationPreset, SPRINGS} from '@nat-ui/registry/lib/motion'
+import {
+  type AnimationPreset,
+  DURATIONS_MS,
+  PRESS_SCALES,
+  SPRINGS,
+} from '@nat-ui/registry/lib/motion'
 import {useState} from 'react'
 
 const PRESETS: AnimationPreset[] = [...(Object.keys(SPRINGS) as AnimationPreset[]), 'none']
@@ -78,10 +83,13 @@ export default function PlaygroundPage() {
         </label>
       </div>
 
-      <div className='flex min-h-32 items-center justify-center rounded-lg border p-8'>
+      <div className='flex min-h-32 flex-col items-center justify-center gap-3 rounded-lg border p-8'>
         <Button animation={animation} variant={variant} size={size}>
           {size === 'icon' ? 'B' : 'Press me'}
         </Button>
+        <p className='font-mono text-xs opacity-60'>
+          {DURATIONS_MS[animation]}ms · presses to {PRESS_SCALES[animation]}
+        </p>
       </div>
 
       <div className='flex flex-col gap-3'>

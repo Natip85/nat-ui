@@ -6,9 +6,13 @@ import {cva} from 'class-variance-authority'
  * client reference -- including a pure `cva` call. Server components (a
  * `<Link>` styled to look like a button, for instance) need to call this
  * function directly, which only works from a module with no directive at all.
+ *
+ * The press depth is read from `--press-scale`, which `pressStyle` sets from
+ * the chosen preset. The fallback keeps a bare `buttonVariants()` pressable on
+ * its own, for anyone who wants the look without importing the motion layer.
  */
 export const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium will-change-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium will-change-transform active:scale-[var(--press-scale,0.96)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
