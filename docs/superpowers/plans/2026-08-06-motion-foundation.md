@@ -1169,21 +1169,19 @@ Expected: FAIL — `transitionTimingFunction` is empty, and TypeScript rejects t
 
 - [ ] **Step 3: Write the implementation**
 
-Replace `packages/registry/src/components/ui/button.tsx`:
+`button.tsx` needs `'use client'` for the `animation` prop's hooks, and a
+directive turns every export of a module into a client reference — including
+a plain `cva` call. `buttonVariants` therefore lives in its own
+`button-variants.tsx`, with no directive, so Server Components can still call
+it directly (for example, to style a `<Link>` as a button). Do not fold it
+back into `button.tsx`, even though it looks like needless indirection: that
+merge is exactly the regression this split fixes, and it would type-check
+cleanly while failing at prerender.
+
+Create `packages/registry/src/components/ui/button-variants.tsx`:
 
 ```tsx
-'use client'
-
-import {Button as BaseButton} from '@base-ui/react/button'
-import {cva, type VariantProps} from 'class-variance-authority'
-import type {ComponentProps} from 'react'
-import {
-  type AnimationPreset,
-  DEFAULT_PRESET,
-  transitionStyle,
-  useResolvedPreset,
-} from '@/lib/motion'
-import {cn} from '@/lib/utils'
+import {cva} from 'class-variance-authority'
 
 export const buttonVariants = cva(
   'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium will-change-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
@@ -1208,6 +1206,24 @@ export const buttonVariants = cva(
     defaultVariants: {variant: 'default', size: 'default'},
   },
 )
+```
+
+Replace `packages/registry/src/components/ui/button.tsx`:
+
+```tsx
+'use client'
+
+import {Button as BaseButton} from '@base-ui/react/button'
+import type {VariantProps} from 'class-variance-authority'
+import type {ComponentProps} from 'react'
+import {buttonVariants} from '@/components/ui/button-variants'
+import {
+  type AnimationPreset,
+  DEFAULT_PRESET,
+  transitionStyle,
+  useResolvedPreset,
+} from '@/lib/motion'
+import {cn} from '@/lib/utils'
 
 /**
  * `className` is narrowed to a string. Base UI also accepts a function of the
@@ -1243,7 +1259,16 @@ export function Button({
 }
 ```
 
+`button.tsx` does not re-export `buttonVariants` — a re-export through a
+`'use client'` module is still a client reference, which would keep the
+regression alive silently. `VariantProps<typeof buttonVariants>` is a
+type-only use and is unaffected.
+
 Note the removal of `transition-colors` from the base class list: the transition is now described entirely by the inline style, and leaving the utility in place would let Tailwind's duration and easing win over the preset.
+
+Add `components/ui/button-variants.tsx` to the `button` item's `files` in
+`packages/registry/src/index.ts` alongside `button.tsx`, so `add button`
+installs both.
 
 - [ ] **Step 4: Run tests to verify they pass**
 

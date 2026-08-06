@@ -1,3 +1,4 @@
+import {buttonVariants} from '@nat-ui/registry/components/ui/button-variants'
 import type {Metadata} from 'next'
 import Link from 'next/link'
 import {appName, siteDescription} from '@/lib/shared'
@@ -21,16 +22,10 @@ export default function HomePage() {
         npx @nat-ui/cli@latest init
       </code>
       <div className='flex gap-3'>
-        <Link
-          href='/docs'
-          className='bg-fd-primary text-fd-primary-foreground rounded-lg px-5 py-2.5 text-sm font-medium'
-        >
+        <Link href='/docs' className={buttonVariants({variant: 'default', size: 'lg'})}>
           Get started
         </Link>
-        <Link
-          href='/components'
-          className='border-fd-border rounded-lg border px-5 py-2.5 text-sm font-medium'
-        >
+        <Link href='/components' className={buttonVariants({variant: 'outline', size: 'lg'})}>
           Browse components
         </Link>
       </div>
