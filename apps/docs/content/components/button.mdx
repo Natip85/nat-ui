@@ -58,12 +58,20 @@ meaning and there is no text for a screen reader to announce.
 
 <ComponentPreview name='button-disabled' />
 
+## Animation
+
+Every nat-ui component takes an `animation` prop. It is independent of
+`variant` and `size`, so appearance and feel vary separately.
+
+<ComponentPreview name='button-animation' />
+
 ## API Reference
 
-| Prop      | Values                                                            | Default   |
-| --------- | ----------------------------------------------------------------- | --------- |
-| `variant` | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
-| `size`    | `sm`, `default`, `lg`, `icon`                                     | `default` |
+| Prop        | Values                                                            | Default   |
+| ----------- | ----------------------------------------------------------------- | --------- |
+| `variant`   | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
+| `size`      | `sm`, `default`, `lg`, `icon`                                     | `default` |
+| `animation` | `smooth`, `snappy`, `bouncy`, `none`                              | `snappy`  |
 
 Every other prop is forwarded to Base UI's `Button`. `className` is narrowed to
 a string: Base UI also accepts a function of the component's state, but the

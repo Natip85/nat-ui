@@ -1,4 +1,5 @@
 import type {ComponentType} from 'react'
+import {ButtonAnimation} from './button-animation'
 import {ButtonDefault} from './button-default'
 import {ButtonDemo} from './button-demo'
 import {ButtonDestructive} from './button-destructive'
@@ -29,4 +30,5 @@ export const demos: Record<string, {component: ComponentType; file: string}> = {
   'button-size': {component: ButtonSize, file: 'button-size.tsx'},
   'button-icon': {component: ButtonIcon, file: 'button-icon.tsx'},
   'button-disabled': {component: ButtonDisabled, file: 'button-disabled.tsx'},
+  'button-animation': {component: ButtonAnimation, file: 'button-animation.tsx'},
 }

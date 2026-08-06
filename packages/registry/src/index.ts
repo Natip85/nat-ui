@@ -18,6 +18,7 @@ export const items: readonly RegistryItem[] = [
     name: 'button',
     type: 'ui',
     dependencies: ['@base-ui/react', 'class-variance-authority'],
+    registryDependencies: ['motion'],
     files: [{path: 'components/ui/button.tsx', type: 'ui'}],
   },
 ]

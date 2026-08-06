@@ -1,10 +1,18 @@
+'use client'
+
 import {Button as BaseButton} from '@base-ui/react/button'
 import {cva, type VariantProps} from 'class-variance-authority'
 import type {ComponentProps} from 'react'
+import {
+  type AnimationPreset,
+  DEFAULT_PRESET,
+  transitionStyle,
+  useResolvedPreset,
+} from '@/lib/motion'
 import {cn} from '@/lib/utils'
 
 export const buttonVariants = cva(
-  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium will-change-transform active:scale-[0.96] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
@@ -33,8 +41,29 @@ export const buttonVariants = cva(
  * state to decide its classes.
  */
 export type ButtonProps = Omit<ComponentProps<typeof BaseButton>, 'className'> &
-  VariantProps<typeof buttonVariants> & {className?: string}
+  VariantProps<typeof buttonVariants> & {
+    className?: string
+    /** How the press responds. Independent of `variant` and `size`. */
+    animation?: AnimationPreset
+  }
 
-export function Button({className, variant, size, ...props}: ButtonProps) {
-  return <BaseButton className={cn(buttonVariants({variant, size, className}))} {...props} />
+export function Button({
+  className,
+  variant,
+  size,
+  animation = DEFAULT_PRESET,
+  style,
+  ...props
+}: ButtonProps) {
+  const preset = useResolvedPreset(animation)
+  // Spread last so a caller's own style wins, the same way `className` does.
+  const transition = transitionStyle(preset, 'transform, background-color, color')
+
+  return (
+    <BaseButton
+      className={cn(buttonVariants({variant, size, className}))}
+      style={{...transition, ...style}}
+      {...props}
+    />
+  )
 }
