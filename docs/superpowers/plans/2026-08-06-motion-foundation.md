@@ -47,81 +47,83 @@ const aliases = {ui: '~/ui', utils: '~/helpers/cn', lib: '~/lib'}
 Update the two existing tests that build their own alias objects so they also carry `lib`:
 
 ```ts
-  test('is a no-op when the project uses the same aliases', () => {
-    const source = "import {cn} from '@/lib/utils'\n"
+test('is a no-op when the project uses the same aliases', () => {
+  const source = "import {cn} from '@/lib/utils'\n"
 
-    expect(
-      rewriteImports(source, {ui: '@/components/ui', utils: '@/lib/utils', lib: '@/lib'}),
-    ).toBe(source)
-  })
+  expect(rewriteImports(source, {ui: '@/components/ui', utils: '@/lib/utils', lib: '@/lib'})).toBe(
+    source,
+  )
+})
 ```
 
 ```ts
-  test('normalizes a trailing slash on the ui alias', () => {
-    const source = "import {buttonVariants} from '@/components/ui/button'\n"
-    const trailingSlashAliases = {ui: '~/ui/', utils: '~/helpers/cn', lib: '~/lib'}
+test('normalizes a trailing slash on the ui alias', () => {
+  const source = "import {buttonVariants} from '@/components/ui/button'\n"
+  const trailingSlashAliases = {ui: '~/ui/', utils: '~/helpers/cn', lib: '~/lib'}
 
-    expect(rewriteImports(source, trailingSlashAliases)).toBe(
-      "import {buttonVariants} from '~/ui/button'\n",
-    )
-  })
+  expect(rewriteImports(source, trailingSlashAliases)).toBe(
+    "import {buttonVariants} from '~/ui/button'\n",
+  )
+})
 
-  test('normalizes multiple trailing slashes on the ui alias', () => {
-    const source = "import {buttonVariants} from '@/components/ui/button'\n"
-    const multiSlashAliases = {ui: '~/ui///', utils: '~/helpers/cn', lib: '~/lib'}
+test('normalizes multiple trailing slashes on the ui alias', () => {
+  const source = "import {buttonVariants} from '@/components/ui/button'\n"
+  const multiSlashAliases = {ui: '~/ui///', utils: '~/helpers/cn', lib: '~/lib'}
 
-    expect(rewriteImports(source, multiSlashAliases)).toBe(
-      "import {buttonVariants} from '~/ui/button'\n",
-    )
-  })
+  expect(rewriteImports(source, multiSlashAliases)).toBe(
+    "import {buttonVariants} from '~/ui/button'\n",
+  )
+})
 
-  test('normalizes a trailing slash on the utils alias', () => {
-    const source = "import {cn} from '@/lib/utils'\n"
-    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn/', lib: '~/lib'}
+test('normalizes a trailing slash on the utils alias', () => {
+  const source = "import {cn} from '@/lib/utils'\n"
+  const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn/', lib: '~/lib'}
 
-    expect(rewriteImports(source, trailingSlashAliases)).toBe("import {cn} from '~/helpers/cn'\n")
-  })
+  expect(rewriteImports(source, trailingSlashAliases)).toBe("import {cn} from '~/helpers/cn'\n")
+})
 ```
 
 Then append these new tests inside the same `describe` block:
 
 ```ts
-  test('rewrites a lib import to the configured lib alias', () => {
-    const source = "import {SPRINGS} from '@/lib/motion'\n"
+test('rewrites a lib import to the configured lib alias', () => {
+  const source = "import {SPRINGS} from '@/lib/motion'\n"
 
-    expect(rewriteImports(source, aliases)).toBe("import {SPRINGS} from '~/lib/motion'\n")
-  })
+  expect(rewriteImports(source, aliases)).toBe("import {SPRINGS} from '~/lib/motion'\n")
+})
 
-  test('still treats @/lib/utils as the utils alias, not the lib alias', () => {
-    const source = "import {cn} from '@/lib/utils'\n"
+test('still treats @/lib/utils as the utils alias, not the lib alias', () => {
+  const source = "import {cn} from '@/lib/utils'\n"
 
-    expect(rewriteImports(source, aliases)).toBe("import {cn} from '~/helpers/cn'\n")
-  })
+  expect(rewriteImports(source, aliases)).toBe("import {cn} from '~/helpers/cn'\n")
+})
 
-  test('rewrites lib and utils imports in the same file', () => {
-    const source = ["import {cn} from '@/lib/utils'", "import {SPRINGS} from '@/lib/motion'", ''].join(
-      '\n',
-    )
+test('rewrites lib and utils imports in the same file', () => {
+  const source = [
+    "import {cn} from '@/lib/utils'",
+    "import {SPRINGS} from '@/lib/motion'",
+    '',
+  ].join('\n')
 
-    expect(rewriteImports(source, aliases)).toBe(
-      ["import {cn} from '~/helpers/cn'", "import {SPRINGS} from '~/lib/motion'", ''].join('\n'),
-    )
-  })
+  expect(rewriteImports(source, aliases)).toBe(
+    ["import {cn} from '~/helpers/cn'", "import {SPRINGS} from '~/lib/motion'", ''].join('\n'),
+  )
+})
 
-  test('normalizes a trailing slash on the lib alias', () => {
-    const source = "import {SPRINGS} from '@/lib/motion'\n"
-    const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn', lib: '~/lib//'}
+test('normalizes a trailing slash on the lib alias', () => {
+  const source = "import {SPRINGS} from '@/lib/motion'\n"
+  const trailingSlashAliases = {ui: '~/ui', utils: '~/helpers/cn', lib: '~/lib//'}
 
-    expect(rewriteImports(source, trailingSlashAliases)).toBe(
-      "import {SPRINGS} from '~/lib/motion'\n",
-    )
-  })
+  expect(rewriteImports(source, trailingSlashAliases)).toBe(
+    "import {SPRINGS} from '~/lib/motion'\n",
+  )
+})
 
-  test('leaves a hooks alias untouched, since nothing installs hook files yet', () => {
-    const source = "import {useThing} from '@/hooks/use-thing'\n"
+test('leaves a hooks alias untouched, since nothing installs hook files yet', () => {
+  const source = "import {useThing} from '@/hooks/use-thing'\n"
 
-    expect(rewriteImports(source, aliases)).toBe(source)
-  })
+  expect(rewriteImports(source, aliases)).toBe(source)
+})
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -155,8 +157,7 @@ const LIB_PREFIX = '@/lib/'
 
 const stripTrailingSlashes = (path: string): string => path.replace(/\/+$/, '')
 
-const joinAlias = (alias: string, rest: string): string =>
-  `${stripTrailingSlashes(alias)}/${rest}`
+const joinAlias = (alias: string, rest: string): string => `${stripTrailingSlashes(alias)}/${rest}`
 
 /**
  * `@/lib/utils` is checked before the `@/lib/` prefix on purpose. It is the one
@@ -188,11 +189,11 @@ Then run `pnpm typecheck`. Expected: FAIL in `packages/cli/src/commands/add.ts`,
 In `packages/cli/src/commands/add.ts`, change the `rewriteImports` call (around line 133):
 
 ```ts
-      const rewritten = rewriteImports(file.content, {
-        ui: config.aliases.ui,
-        utils: config.aliases.utils,
-        lib: config.aliases.lib ?? config.aliases.utils,
-      })
+const rewritten = rewriteImports(file.content, {
+  ui: config.aliases.ui,
+  utils: config.aliases.utils,
+  lib: config.aliases.lib ?? config.aliases.utils,
+})
 ```
 
 Run `pnpm typecheck` again. Expected: PASS.
@@ -453,39 +454,39 @@ Add three entries to the `documents` record:
 The `mixed` document carries one `ui` file and one `lib` file, and this test currently asserts `add` rejects it:
 
 ```ts
-  test('refuses unsupported file types without writing anything', async () => {
-    const io = makeIo()
-    const code = await add(io, options({names: ['mixed']}))
+test('refuses unsupported file types without writing anything', async () => {
+  const io = makeIo()
+  const code = await add(io, options({names: ['mixed']}))
 
-    expect(code).toBe(1)
-    expect(io.logs.join('\n')).toMatch(/lib/)
-    await expect(read('src/components/ui/button.tsx')).rejects.toThrow()
-    await expect(read('src/components/ui/mixed.tsx')).rejects.toThrow()
-  })
+  expect(code).toBe(1)
+  expect(io.logs.join('\n')).toMatch(/lib/)
+  await expect(read('src/components/ui/button.tsx')).rejects.toThrow()
+  await expect(read('src/components/ui/mixed.tsx')).rejects.toThrow()
+})
 ```
 
 That is precisely the behaviour this task changes, so replace it with two tests — one asserting the new behaviour, one keeping the old guarantee for a file type that genuinely cannot be placed:
 
 ```ts
-  test('places each file of a mixed item by its type', async () => {
-    const io = makeIo()
+test('places each file of a mixed item by its type', async () => {
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['mixed']}))
+  const code = await add(io, options({names: ['mixed']}))
 
-    expect(code).toBe(0)
-    expect(await read('src/components/ui/mixed.tsx')).toBe('export const Mixed = () => null\n')
-    expect(await read('src/lib/helper.ts')).toBe('export const helper = () => {}\n')
-  })
+  expect(code).toBe(0)
+  expect(await read('src/components/ui/mixed.tsx')).toBe('export const Mixed = () => null\n')
+  expect(await read('src/lib/helper.ts')).toBe('export const helper = () => {}\n')
+})
 
-  test('refuses a file type it cannot place, without writing anything', async () => {
-    const io = makeIo()
+test('refuses a file type it cannot place, without writing anything', async () => {
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['page']}))
+  const code = await add(io, options({names: ['page']}))
 
-    expect(code).toBe(1)
-    expect(io.logs.join('\n')).toMatch(/component/)
-    await expect(read('src/components/ui/page.tsx')).rejects.toThrow()
-  })
+  expect(code).toBe(1)
+  expect(io.logs.join('\n')).toMatch(/component/)
+  await expect(read('src/components/ui/page.tsx')).rejects.toThrow()
+})
 ```
 
 - [ ] **Step 7: Write the failing tests for lib placement**
@@ -493,52 +494,52 @@ That is precisely the behaviour this task changes, so replace it with two tests 
 Append inside `describe('add', ...)`:
 
 ```ts
-  test('installs a lib item into the directory holding utils', async () => {
-    const io = makeIo()
+test('installs a lib item into the directory holding utils', async () => {
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['motion']}))
+  const code = await add(io, options({names: ['motion']}))
 
-    expect(code).toBe(0)
-    expect(await read('src/lib/motion.ts')).toBe(motionSource)
-  })
+  expect(code).toBe(0)
+  expect(await read('src/lib/motion.ts')).toBe(motionSource)
+})
 
-  test('installs a lib item into an explicit lib alias when the config has one', async () => {
-    await writeFile(
-      join(cwd, CONFIG_FILE_NAME),
-      JSON.stringify({...config, aliases: {...config.aliases, lib: '@/shared'}}),
-    )
-    const io = makeIo()
+test('installs a lib item into an explicit lib alias when the config has one', async () => {
+  await writeFile(
+    join(cwd, CONFIG_FILE_NAME),
+    JSON.stringify({...config, aliases: {...config.aliases, lib: '@/shared'}}),
+  )
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['motion']}))
+  const code = await add(io, options({names: ['motion']}))
 
-    expect(code).toBe(0)
-    expect(await read('src/shared/motion.ts')).toBe(motionSource)
-  })
+  expect(code).toBe(0)
+  expect(await read('src/shared/motion.ts')).toBe(motionSource)
+})
 
-  test('installs a ui item together with the lib item it depends on', async () => {
-    const io = makeIo()
+test('installs a ui item together with the lib item it depends on', async () => {
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['springy']}))
+  const code = await add(io, options({names: ['springy']}))
 
-    expect(code).toBe(0)
-    expect(await read('src/lib/motion.ts')).toBe(motionSource)
-    expect(await read('src/components/ui/springy.tsx')).toBe(springySource)
-  })
+  expect(code).toBe(0)
+  expect(await read('src/lib/motion.ts')).toBe(motionSource)
+  expect(await read('src/components/ui/springy.tsx')).toBe(springySource)
+})
 
-  test('rewrites a lib import to a custom lib alias', async () => {
-    await writeFile(
-      join(cwd, CONFIG_FILE_NAME),
-      JSON.stringify({...config, aliases: {...config.aliases, lib: '~/shared'}}),
-    )
-    const io = makeIo()
+test('rewrites a lib import to a custom lib alias', async () => {
+  await writeFile(
+    join(cwd, CONFIG_FILE_NAME),
+    JSON.stringify({...config, aliases: {...config.aliases, lib: '~/shared'}}),
+  )
+  const io = makeIo()
 
-    const code = await add(io, options({names: ['springy']}))
+  const code = await add(io, options({names: ['springy']}))
 
-    expect(code).toBe(0)
-    expect(await read('src/components/ui/springy.tsx')).toBe(
-      "import {SPRINGS} from '~/shared/motion'\n",
-    )
-  })
+  expect(code).toBe(0)
+  expect(await read('src/components/ui/springy.tsx')).toBe(
+    "import {SPRINGS} from '~/shared/motion'\n",
+  )
+})
 ```
 
 - [ ] **Step 8: Run tests to verify they fail**
@@ -557,21 +558,25 @@ import {aliasBaseDir, aliasDirOf, aliasPrefixOf, aliasToPath, isWithinRoot} from
 Replace lines 104-108 (the `uiDir` computation) with:
 
 ```ts
-  const detected = await detectProject(io.cwd, io.env)
+const detected = await detectProject(io.cwd, io.env)
 
-  const resolveAliasDir = (alias: string): string => {
-    if (isAbsolute(alias)) return alias
-    const prefix = aliasPrefixOf(alias)
+const resolveAliasDir = (alias: string): string => {
+  if (isAbsolute(alias)) return alias
+  const prefix = aliasPrefixOf(alias)
 
-    return aliasToPath(alias, prefix, aliasBaseDir(io.cwd, detected.aliasTargets, prefix, config.tailwind.css))
-  }
+  return aliasToPath(
+    alias,
+    prefix,
+    aliasBaseDir(io.cwd, detected.aliasTargets, prefix, config.tailwind.css),
+  )
+}
 
-  const uiDir = resolveAliasDir(config.aliases.ui)
-  // Every config carries `utils`; `lib` is optional and absent from any
-  // components.json written before lib items existed, so the directory holding
-  // `utils` is the fallback rather than a hard-coded path.
-  const libAlias = config.aliases.lib ?? aliasDirOf(config.aliases.utils)
-  const libDir = resolveAliasDir(libAlias)
+const uiDir = resolveAliasDir(config.aliases.ui)
+// Every config carries `utils`; `lib` is optional and absent from any
+// components.json written before lib items existed, so the directory holding
+// `utils` is the fallback rather than a hard-coded path.
+const libAlias = config.aliases.lib ?? aliasDirOf(config.aliases.utils)
+const libDir = resolveAliasDir(libAlias)
 ```
 
 Delete the now-duplicated `const detected = await detectProject(...)` line that preceded it, and the standalone `const prefix = ...` / `const baseDir = ...` lines.
@@ -613,15 +618,15 @@ This replaces the temporary `lib: config.aliases.lib ?? config.aliases.utils` ad
 Finally, the out-of-root check below the loop names the ui alias in its message. Make it name whichever alias produced the path:
 
 ```ts
-  for (const file of planned) {
-    if (!isWithinRoot(io.cwd, file.absolute)) {
-      io.log(
-        `An alias resolves to ${file.relative} outside the project. Choose aliases inside the project root.`,
-      )
+for (const file of planned) {
+  if (!isWithinRoot(io.cwd, file.absolute)) {
+    io.log(
+      `An alias resolves to ${file.relative} outside the project. Choose aliases inside the project root.`,
+    )
 
-      return 1
-    }
+    return 1
   }
+}
 ```
 
 If an existing test asserts the old wording, update it to match.

@@ -31,13 +31,13 @@ for.
 Twenty shadcn registries compete today. Sorting them by component count against
 recognition gives an unambiguous answer:
 
-| Library         | Components | Recognition       |
-| --------------- | ---------- | ----------------- |
-| Neobrutalism    | ~30        | 5.2k stars        |
-| Cult UI         | 78         | 5.9k stars        |
-| 8bitcn          | ~35        | 1.9k stars        |
-| Origin UI       | 484        | not a household name |
-| ReUI            | 1000+      | not a household name |
+| Library      | Components | Recognition          |
+| ------------ | ---------- | -------------------- |
+| Neobrutalism | ~30        | 5.2k stars           |
+| Cult UI      | 78         | 5.9k stars           |
+| 8bitcn       | ~35        | 1.9k stars           |
+| Origin UI    | 484        | not a household name |
+| ReUI         | 1000+      | not a household name |
 
 Neobrutalism earns 5.2k stars from thirty components because it can be
 described in three words. ReUI ships a thousand and cannot be described at all.
@@ -184,7 +184,7 @@ Every component takes `animation`, a second axis alongside shadcn's existing
 `variant`:
 
 ```tsx
-<Button variant="destructive" animation="bouncy" />
+<Button variant='destructive' animation='bouncy' />
 ```
 
 Appearance and feel vary independently. The same prop name and the same preset
@@ -198,11 +198,11 @@ generated source.
 
 ### Presets, and why choreography is fixed
 
-| Preset   | Stiffness | Damping | Character                                  |
-| -------- | --------- | ------- | ------------------------------------------ |
-| `smooth` | 200       | 28      | Large travel, zero overshoot                |
+| Preset   | Stiffness | Damping | Character                                    |
+| -------- | --------- | ------- | -------------------------------------------- |
+| `smooth` | 200       | 28      | Large travel, zero overshoot                 |
 | `snappy` | 520       | 26      | Very fast, overshoots once — **the default** |
-| `bouncy` | 340       | 9       | Several visible oscillations                |
+| `bouncy` | 340       | 9       | Several visible oscillations                 |
 
 Mass is 1 throughout. These were chosen by feel, in a browser, against live
 demos rather than on paper.
@@ -249,7 +249,7 @@ Test one says skip anything shadcn ships, which would exclude every primitive.
 They are admitted anyway, capped at four, because the motion language is most
 legible in the simplest components and because a button is the cheapest possible
 demonstration of the library's feel — someone presses it once and knows whether
-nat-ui is worth their time. Neobrutalism's button *is* their product and nobody
+nat-ui is worth their time. Neobrutalism's button _is_ their product and nobody
 calls it a clone.
 
 The cap exists because the failure mode is real: ship button, then input, then
@@ -341,7 +341,7 @@ and most people will not do it.
 
 Existing projects are nearly the entire addressable audience. Kibo UI ships both
 paths for exactly this reason and is the only registry in the survey with its
-own CLI *and* real adoption.
+own CLI _and_ real adoption.
 
 ### What the nat-ui CLI is for afterwards
 
@@ -446,8 +446,8 @@ one before it has shipped.
 
 At 10–15 hours a week over three months, roughly 150 hours:
 
-| Work                                       | Estimate |
-| ------------------------------------------ | -------- |
+| Work                                        | Estimate |
+| ------------------------------------------- | -------- |
 | Motion token layer and the spring generator | ~12h     |
 | 12 components at ~7h each                   | ~85h     |
 | Dual registry output and guards             | ~10h     |
