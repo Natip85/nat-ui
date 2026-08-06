@@ -29,8 +29,8 @@ export const importSpecifiers = (source: string): string[] => {
   return found
 }
 
-/** The two shapes `add` knows how to rewrite. Anything else would ship broken. */
-const SUPPORTED_ALIAS = /^@\/(?:lib\/utils|components\/ui\/[a-z0-9-]+)$/
+/** The shapes `add` knows how to rewrite. Anything else would ship broken. */
+const SUPPORTED_ALIAS = /^@\/(?:lib\/[a-z0-9-]+|components\/ui\/[a-z0-9-]+)$/
 const DYNAMIC_SPECIFIER = /\bimport\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g
 
 const dynamicImportSpecifiers = (source: string): string[] => {
@@ -96,18 +96,27 @@ export const undeclaredDependencies = (source: string, declared: readonly string
   return [...missing]
 }
 
+/**
+ * `hook`, `block`, and `style` are in the schema for later. Publishing one now
+ * would produce a document `add` refuses, so the build stops here instead.
+ */
+const INSTALLABLE_ITEM_TYPES = new Set(['ui', 'lib'])
+const INSTALLABLE_FILE_TYPES = new Set(['ui', 'lib'])
+
 export const toPayload = (
   item: RegistryItem,
   read: (path: string) => string,
 ): RegistryItemPayload => {
-  if (item.type !== 'ui') {
-    throw new Error(`Item "${item.name}" is type "${item.type}", but only "ui" can be installed.`)
+  if (!INSTALLABLE_ITEM_TYPES.has(item.type)) {
+    throw new Error(
+      `Item "${item.name}" is type "${item.type}", but only "ui" and "lib" can be installed.`,
+    )
   }
 
   const files = item.files.map((file) => {
-    if (file.type !== 'ui') {
+    if (!INSTALLABLE_FILE_TYPES.has(file.type)) {
       throw new Error(
-        `File "${file.path}" in "${item.name}" is type "${file.type}", but only "ui" can be installed.`,
+        `File "${file.path}" in "${item.name}" is type "${file.type}", but only "ui" and "lib" can be installed.`,
       )
     }
 

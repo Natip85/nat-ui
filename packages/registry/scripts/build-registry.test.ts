@@ -98,14 +98,16 @@ describe('toPayload', () => {
   })
 
   test('refuses an item the CLI could not install', () => {
-    const asLib: RegistryItem = {...button, type: 'lib'}
-    const fileAsLib: RegistryItem = {
+    const asHook: RegistryItem = {...button, type: 'hook'}
+    const fileAsComponent: RegistryItem = {
       ...button,
-      files: [{path: 'lib/thing.ts', type: 'lib'}],
+      files: [{path: 'components/thing.tsx', type: 'component'}],
     }
 
-    expect(() => toPayload(asLib, reading(''))).toThrow(/only "ui"/)
-    expect(() => toPayload(fileAsLib, reading(''))).toThrow(/only "ui"/)
+    expect(() => toPayload(asHook, reading(''))).toThrow(/only "ui" and "lib" can be installed/)
+    expect(() => toPayload(fileAsComponent, reading(''))).toThrow(
+      /only "ui" and "lib" can be installed/,
+    )
   })
 
   test('refuses an import the rewriter does not understand', () => {
@@ -356,5 +358,55 @@ describe('toPayload dependency validation', () => {
     const read = () => "const {clsx} = await import('clsx')\n"
 
     expect(() => toPayload(item, read)).toThrow(/clsx/)
+  })
+})
+
+describe('lib items', () => {
+  const libItem: RegistryItem = {
+    name: 'motion',
+    type: 'lib',
+    files: [{path: 'lib/motion.ts', type: 'lib'}],
+  }
+
+  test('publishes a lib item', () => {
+    const payload = toPayload(libItem, () => 'export const SPRINGS = {}\n')
+
+    expect(payload.type).toBe('lib')
+    expect(payload.files[0]?.type).toBe('lib')
+    expect(payload.files[0]?.content).toBe('export const SPRINGS = {}\n')
+  })
+
+  test('refuses an item type the CLI cannot install', () => {
+    const hookItem: RegistryItem = {
+      name: 'use-thing',
+      type: 'hook',
+      files: [{path: 'hooks/use-thing.ts', type: 'hook'}],
+    }
+
+    expect(() => toPayload(hookItem, () => '')).toThrow(/only "ui" and "lib" can be installed/)
+  })
+
+  test('refuses a file type the CLI cannot install', () => {
+    const mixed: RegistryItem = {
+      name: 'thing',
+      type: 'ui',
+      files: [{path: 'components/thing.tsx', type: 'component'}],
+    }
+
+    expect(() => toPayload(mixed, () => '')).toThrow(/only "ui" and "lib" can be installed/)
+  })
+
+  test('accepts a component importing a lib file other than utils', () => {
+    expect(unsupportedAliasImports("import {SPRINGS} from '@/lib/motion'\n")).toEqual([])
+  })
+
+  test('still accepts the utils import', () => {
+    expect(unsupportedAliasImports("import {cn} from '@/lib/utils'\n")).toEqual([])
+  })
+
+  test('still refuses an alias shape the CLI cannot rewrite', () => {
+    expect(unsupportedAliasImports("import {useThing} from '@/hooks/use-thing'\n")).toEqual([
+      '@/hooks/use-thing',
+    ])
   })
 })
