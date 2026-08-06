@@ -15,7 +15,7 @@
 - `pnpm build` regenerates `r/`, which is committed. CI runs `git diff --exit-code -- r`, so run `pnpm build` and commit the result whenever a component or the `items` array changes.
 - Registry item names match `/^[a-z0-9]+(-[a-z0-9]+)*$/`.
 - `REGISTRY_SCHEMA_VERSION` stays `'1'`. Do not add keys to `registryItemSchema` — it is a `z.strictObject` compiled into every published CLI, and a new key breaks installed clients.
-- Preset constants are fixed by the spec and must be used verbatim: `smooth` = stiffness 200 / damping 28, `snappy` = stiffness 520 / damping 26, `bouncy` = stiffness 340 / damping 9. Mass is 1 throughout. Default preset is `snappy`.
+- Preset constants are fixed by the spec and must be used verbatim: `smooth` = stiffness 1080 / damping 65, `snappy` = stiffness 1400 / damping 43, `bouncy` = stiffness 5200 / damping 35. Mass is 1 throughout. Default preset is `snappy`. (Revised after Task 5 shipped: the original stiffness/damping pairs preserved the right damping ratios but settled in 658–1575ms, too slow for a fixed-duration CSS transition, so both were scaled up together to hold the ratio — and therefore the feel — fixed while compressing the duration to roughly 400ms.)
 - Preset names are exactly `smooth`, `snappy`, `bouncy`, `none`. The prop is named `animation` on every component.
 - Presets vary physics only. Never vary travel distance, scale depth, or any other choreography between presets.
 - Run `pnpm test`, `pnpm lint`, and `pnpm typecheck` before every commit.
@@ -888,14 +888,21 @@ export interface Spring {
 }
 
 /**
- * Chosen by feel against live demos rather than derived. Presets vary physics
- * only -- travel distance and scale depth are fixed by each component, so
- * switching preset changes how a thing moves and never what it does.
+ * The damping ratio -- c / (2·√(k·m)), which sets how far a spring overshoots
+ * and how many times it crosses rest -- was chosen by feel against live demos.
+ * The absolute stiffness and damping are not: they are scaled up together,
+ * ratio held fixed, until each preset settles in roughly 400ms. A live
+ * simulation hides a spring's long low-amplitude tail as sub-pixel wobble, but
+ * these constants also drive a fixed-duration CSS transition, where that same
+ * tail becomes part of the declared length instead of something invisible.
+ * Presets vary physics only -- travel distance and scale depth are fixed by
+ * each component, so switching preset changes how a thing moves and never
+ * what it does.
  */
 export const SPRINGS: Record<Exclude<AnimationPreset, 'none'>, Spring> = {
-  smooth: {stiffness: 200, damping: 28, mass: 1},
-  snappy: {stiffness: 520, damping: 26, mass: 1},
-  bouncy: {stiffness: 340, damping: 9, mass: 1},
+  smooth: {stiffness: 1080, damping: 65, mass: 1},
+  snappy: {stiffness: 1400, damping: 43, mass: 1},
+  bouncy: {stiffness: 5200, damping: 35, mass: 1},
 }
 
 export const DEFAULT_PRESET: AnimationPreset = 'snappy'

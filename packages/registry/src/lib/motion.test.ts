@@ -101,4 +101,16 @@ describe('the derived tables', () => {
   test('the default preset is snappy', () => {
     expect(DEFAULT_PRESET).toBe('snappy')
   })
+
+  test('every preset settles in a duration a UI can actually use', () => {
+    // The defect this catches is not a coding error but a category error:
+    // constants tuned in a live spring simulation carry a long, invisible tail,
+    // and a fixed-duration CSS transition turns that tail into part of the
+    // animation's declared length. The original constants produced 838ms,
+    // 658ms and 1575ms, all of which pass every other test in this file.
+    for (const preset of Object.keys(SPRINGS) as (keyof typeof SPRINGS)[]) {
+      expect(DURATIONS_MS[preset]).toBeGreaterThan(150)
+      expect(DURATIONS_MS[preset]).toBeLessThan(600)
+    }
+  })
 })

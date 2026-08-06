@@ -200,9 +200,9 @@ generated source.
 
 | Preset   | Stiffness | Damping | Character                                    |
 | -------- | --------- | ------- | -------------------------------------------- |
-| `smooth` | 200       | 28      | Large travel, zero overshoot                 |
-| `snappy` | 520       | 26      | Very fast, overshoots once — **the default** |
-| `bouncy` | 340       | 9       | Several visible oscillations                 |
+| `smooth` | 1080      | 65      | Large travel, zero overshoot                 |
+| `snappy` | 1400      | 43      | Very fast, overshoots once — **the default** |
+| `bouncy` | 5200      | 35      | Several visible oscillations                 |
 
 Mass is 1 throughout. These were chosen by feel, in a browser, against live
 demos rather than on paper.

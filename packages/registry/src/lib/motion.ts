@@ -15,14 +15,21 @@ export interface Spring {
 }
 
 /**
- * Chosen by feel against live demos rather than derived. Presets vary physics
- * only -- travel distance and scale depth are fixed by each component, so
- * switching preset changes how a thing moves and never what it does.
+ * The damping ratio -- c / (2·√(k·m)), which sets how far a spring overshoots
+ * and how many times it crosses rest -- was chosen by feel against live demos.
+ * The absolute stiffness and damping are not: they are scaled up together,
+ * ratio held fixed, until each preset settles in roughly 400ms. A live
+ * simulation hides a spring's long low-amplitude tail as sub-pixel wobble, but
+ * these constants also drive a fixed-duration CSS transition, where that same
+ * tail becomes part of the declared length instead of something invisible.
+ * Presets vary physics only -- travel distance and scale depth are fixed by
+ * each component, so switching preset changes how a thing moves and never
+ * what it does.
  */
 export const SPRINGS: Record<Exclude<AnimationPreset, 'none'>, Spring> = {
-  smooth: {stiffness: 200, damping: 28, mass: 1},
-  snappy: {stiffness: 520, damping: 26, mass: 1},
-  bouncy: {stiffness: 340, damping: 9, mass: 1},
+  smooth: {stiffness: 1080, damping: 65, mass: 1},
+  snappy: {stiffness: 1400, damping: 43, mass: 1},
+  bouncy: {stiffness: 5200, damping: 35, mass: 1},
 }
 
 export const DEFAULT_PRESET: AnimationPreset = 'snappy'
