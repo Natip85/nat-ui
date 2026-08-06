@@ -206,15 +206,10 @@ generated source.
 
 Mass is 1 throughout.
 
-An earlier revision of this table held all three to roughly 400ms and let only
-the damping ratio vary, on the principle stated below that presets should vary
-physics and never choreography. Shipped, the three were indistinguishable: the
-entire visible difference between `snappy` and `bouncy` came to half a pixel on
-a button. Duration is the cue the eye reads first, so it now spans 120ms to
-900ms; and because overshoot is a proportion of the distance travelled, press
-depth varies with it, or a bounce has nowhere to happen. Choreography is still
-fixed per component — what a press _does_ is unchanged — but its magnitude and
-duration are part of the preset, not fixed against it.
+An earlier revision of this table held all three to roughly 400ms and varied
+only the damping ratio. Shipped, the three were indistinguishable — see the
+contract below for why that followed from the rule this spec used to state.
+Duration now spans 120ms to 900ms, and press depth varies alongside it.
 
 `none` exists as a fourth value but is not a personality — it is the target
 `prefers-reduced-motion` collapses everything to.
@@ -228,19 +223,28 @@ nobody ships oscillating inputs on a settings page. `smooth` as the default
 undersells the premise. Defaulting to `snappy` with `bouncy` one prop away gets
 both.
 
-**The presets change physics, never choreography.** How far a press travels,
-how far a panel rises, how deep a scale goes — all identical across presets.
-Only stiffness and damping vary.
+**The presets change how far and how fast, never what.** A press is a press
+under every preset. No preset adds a rotation, a slide, or a stage that another
+one lacks, and nothing moves under `bouncy` that sat still under `smooth`. What
+varies is duration and the distance covered — for a button press, the three
+depths and durations in the table above.
 
-This matters more than it appears. If `bouncy` also moved further than `smooth`,
-the prop would change two things at once and nobody could predict the effect of
-switching it across thirty components. Fixing choreography and varying physics
-is what makes the prop comprehensible at scale.
+This matters more than it appears. The prop stays predictable across thirty
+components precisely because switching it can only change the intensity of a
+gesture you have already seen, never introduce one you have not.
 
-The choreography itself is deliberately loud — a press scales to 0.80, panels
-enter from 0.35 scale and 28px below. "In your face" is a property of nat-ui as
-a whole, not something reserved for the bounciest setting, because it is the
-specialisation.
+An earlier draft drew the line one notch tighter, fixing distance as well and
+varying only stiffness and damping, on the theory that a prop changing one
+thing is easier to reason about than a prop changing two. That was wrong in a
+specific and instructive way. Overshoot is a proportion of the distance
+travelled, so pinning distance while varying only the spring left `bouncy`
+overshooting across half a pixel: the prop stayed perfectly predictable by
+becoming imperceptible. Distance and duration are what the eye reads, so they
+belong to the preset.
+
+The choreography itself is deliberately loud — panels enter from 0.35 scale and
+28px below. "In your face" is a property of nat-ui as a whole, not something
+reserved for the bounciest setting, because it is the specialisation.
 
 ### The extension not being built
 
