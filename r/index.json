@@ -4,14 +4,6 @@
     {
       "name": "button",
       "type": "ui"
-    },
-    {
-      "name": "dialog",
-      "type": "ui"
-    },
-    {
-      "name": "input",
-      "type": "ui"
     }
   ]
 }

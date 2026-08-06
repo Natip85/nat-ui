@@ -9,11 +9,6 @@ import {ButtonLink} from './button-link'
 import {ButtonOutline} from './button-outline'
 import {ButtonSecondary} from './button-secondary'
 import {ButtonSize} from './button-size'
-import {DialogDemo} from './dialog-demo'
-import {DialogNoCloseButton} from './dialog-no-close-button'
-import {InputDemo} from './input-demo'
-import {InputDisabled} from './input-disabled'
-import {InputInvalid} from './input-invalid'
 
 /**
  * Explicit rather than a glob: a dynamic import on a variable path does not
@@ -34,12 +29,4 @@ export const demos: Record<string, {component: ComponentType; file: string}> = {
   'button-size': {component: ButtonSize, file: 'button-size.tsx'},
   'button-icon': {component: ButtonIcon, file: 'button-icon.tsx'},
   'button-disabled': {component: ButtonDisabled, file: 'button-disabled.tsx'},
-  'input-demo': {component: InputDemo, file: 'input-demo.tsx'},
-  'input-disabled': {component: InputDisabled, file: 'input-disabled.tsx'},
-  'input-invalid': {component: InputInvalid, file: 'input-invalid.tsx'},
-  'dialog-demo': {component: DialogDemo, file: 'dialog-demo.tsx'},
-  'dialog-no-close-button': {
-    component: DialogNoCloseButton,
-    file: 'dialog-no-close-button.tsx',
-  },
 }

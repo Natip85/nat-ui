@@ -15,19 +15,6 @@ export const items: readonly RegistryItem[] = [
     dependencies: ['@base-ui/react', 'class-variance-authority'],
     files: [{path: 'components/ui/button.tsx', type: 'ui'}],
   },
-  {
-    name: 'dialog',
-    type: 'ui',
-    dependencies: ['@base-ui/react', 'lucide-react'],
-    registryDependencies: ['button'],
-    files: [{path: 'components/ui/dialog.tsx', type: 'ui'}],
-  },
-  {
-    name: 'input',
-    type: 'ui',
-    dependencies: ['@base-ui/react'],
-    files: [{path: 'components/ui/input.tsx', type: 'ui'}],
-  },
 ]
 
 export const registry = {schemaVersion: REGISTRY_SCHEMA_VERSION, items} as const
