@@ -1,6 +1,6 @@
 import {join} from 'node:path'
 import {describe, expect, test} from 'vitest'
-import {aliasBaseDir, aliasPrefixOf, aliasToPath, isWithinRoot} from './alias'
+import {aliasBaseDir, aliasDirOf, aliasPrefixOf, aliasToPath, isWithinRoot} from './alias'
 
 describe('isWithinRoot', () => {
   test('accepts a path inside the root', () => {
@@ -57,5 +57,23 @@ describe('aliasBaseDir', () => {
     const targets = [{prefix: '@', targetDir: join('..', 'elsewhere')}]
 
     expect(aliasBaseDir('/p', targets, '@', 'src/app/globals.css')).toBe('src')
+  })
+})
+
+describe('aliasDirOf', () => {
+  test('returns the directory an aliased file sits in', () => {
+    expect(aliasDirOf('@/lib/utils')).toBe('@/lib')
+  })
+
+  test('handles a nested alias', () => {
+    expect(aliasDirOf('~/src/helpers/cn')).toBe('~/src/helpers')
+  })
+
+  test('ignores trailing slashes', () => {
+    expect(aliasDirOf('@/lib/utils//')).toBe('@/lib')
+  })
+
+  test('returns the alias itself when there is no directory part', () => {
+    expect(aliasDirOf('utils')).toBe('utils')
   })
 })

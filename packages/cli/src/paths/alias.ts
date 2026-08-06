@@ -49,3 +49,15 @@ export const aliasBaseDir = (
 
   return target !== undefined && isWithinRoot(cwd, join(cwd, target)) ? target : fallback
 }
+
+/**
+ * `@/lib/utils` → `@/lib`. Used to place lib files when a project's
+ * `components.json` predates the `lib` alias: every config carries `utils`, and
+ * the directory it names is where a second lib file belongs.
+ */
+export const aliasDirOf = (alias: string): string => {
+  const stripped = alias.replace(/\/+$/, '')
+  const slash = stripped.lastIndexOf('/')
+
+  return slash === -1 ? stripped : stripped.slice(0, slash)
+}

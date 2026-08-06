@@ -18,6 +18,8 @@ const config = {
 }
 
 const buttonSource = "import {cn} from '@/lib/utils'\n\nexport const Button = () => null\n"
+const motionSource = 'export const SPRINGS = {}\n'
+const springySource = "import {SPRINGS} from '@/lib/motion'\n"
 const dialogSource = [
   "'use client'",
   '',
@@ -52,6 +54,25 @@ const documents: Record<string, unknown> = {
       {path: 'components/ui/mixed.tsx', type: 'ui', content: 'export const Mixed = () => null\n'},
       {path: 'lib/helper.ts', type: 'lib', content: 'export const helper = () => {}\n'},
     ],
+  },
+  motion: {
+    schemaVersion: '1',
+    name: 'motion',
+    type: 'lib',
+    files: [{path: 'lib/motion.ts', type: 'lib', content: motionSource}],
+  },
+  springy: {
+    schemaVersion: '1',
+    name: 'springy',
+    type: 'ui',
+    registryDependencies: ['motion'],
+    files: [{path: 'components/ui/springy.tsx', type: 'ui', content: springySource}],
+  },
+  page: {
+    schemaVersion: '1',
+    name: 'page',
+    type: 'ui',
+    files: [{path: 'components/page.tsx', type: 'component', content: 'PAGE\n'}],
   },
   'collider-a': {
     schemaVersion: '1',
@@ -345,14 +366,71 @@ describe('add', () => {
     }
   })
 
-  test('refuses unsupported file types without writing anything', async () => {
+  test('places each file of a mixed item by its type', async () => {
     const io = makeIo()
+
     const code = await add(io, options({names: ['mixed']}))
 
+    expect(code).toBe(0)
+    expect(await read('src/components/ui/mixed.tsx')).toBe('export const Mixed = () => null\n')
+    expect(await read('src/lib/helper.ts')).toBe('export const helper = () => {}\n')
+  })
+
+  test('refuses a file type it cannot place, without writing anything', async () => {
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['page']}))
+
     expect(code).toBe(1)
-    expect(io.logs.join('\n')).toMatch(/lib/)
-    await expect(read('src/components/ui/button.tsx')).rejects.toThrow()
-    await expect(read('src/components/ui/mixed.tsx')).rejects.toThrow()
+    expect(io.logs.join('\n')).toMatch(/component/)
+    await expect(read('src/components/ui/page.tsx')).rejects.toThrow()
+  })
+
+  test('installs a lib item into the directory holding utils', async () => {
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['motion']}))
+
+    expect(code).toBe(0)
+    expect(await read('src/lib/motion.ts')).toBe(motionSource)
+  })
+
+  test('installs a lib item into an explicit lib alias when the config has one', async () => {
+    await writeFile(
+      join(cwd, CONFIG_FILE_NAME),
+      JSON.stringify({...config, aliases: {...config.aliases, lib: '@/shared'}}),
+    )
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['motion']}))
+
+    expect(code).toBe(0)
+    expect(await read('src/shared/motion.ts')).toBe(motionSource)
+  })
+
+  test('installs a ui item together with the lib item it depends on', async () => {
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['springy']}))
+
+    expect(code).toBe(0)
+    expect(await read('src/lib/motion.ts')).toBe(motionSource)
+    expect(await read('src/components/ui/springy.tsx')).toBe(springySource)
+  })
+
+  test('rewrites a lib import to a custom lib alias', async () => {
+    await writeFile(
+      join(cwd, CONFIG_FILE_NAME),
+      JSON.stringify({...config, aliases: {...config.aliases, lib: '~/shared'}}),
+    )
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['springy']}))
+
+    expect(code).toBe(0)
+    expect(await read('src/components/ui/springy.tsx')).toBe(
+      "import {SPRINGS} from '~/shared/motion'\n",
+    )
   })
 
   test('reports a failed install with the command to run by hand', async () => {
