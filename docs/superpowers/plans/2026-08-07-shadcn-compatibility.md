@@ -460,10 +460,13 @@ In `main`, after the existing `documents` map is built, add:
 // has to say localhost.
 const shadcnBaseUrl = process.env.NAT_UI_SHADCN_BASE_URL ?? DEFAULT_SHADCN_BASE_URL
 const known = new Set(items.map((item) => item.name))
-const sorted = [...items].sort(byName)
+// Looked up by name rather than by index. `payloads` happens to be in the
+// same order as a re-sorted `items` today, and pairing them positionally
+// would silently mis-associate every document the day either sort changes.
+const payloadsByName = new Map(payloads.map((payload) => [payload.name, payload] as const))
 const shadcnDocuments = new Map<string, string>(
-  sorted.map((item, at): [string, string] => {
-    const payload = payloads[at]
+  [...items].sort(byName).map((item): [string, string] => {
+    const payload = payloadsByName.get(item.name)
     if (payload === undefined) throw new Error(`No payload was built for "${item.name}".`)
 
     return [`${item.name}.json`, serialize(toShadcnItem(item, payload, shadcnBaseUrl, known))]
