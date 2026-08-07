@@ -107,6 +107,7 @@ const listPackedFiles = async (root: string): Promise<readonly PackedFile[]> => 
 const isExpectedPath = (path: string): boolean =>
   path === 'package.json' ||
   path === 'LICENSE' ||
+  path === 'README.md' ||
   path === 'THIRD_PARTY_NOTICES' ||
   (path.startsWith('dist/') && !METAFILE_PATTERN.test(path))
 
@@ -146,6 +147,13 @@ const main = async (): Promise<void> => {
 
     if (!byPath.has('THIRD_PARTY_NOTICES')) {
       issues.push('THIRD_PARTY_NOTICES is missing from the packed tarball.')
+    }
+
+    // npm publishes README.md whatever `files` says, so its absence means the
+    // file itself is gone — and the failure is silent: a blank package page on
+    // npm that nobody notices until someone goes looking for documentation.
+    if (!byPath.has('README.md')) {
+      issues.push('README.md is missing from the packed tarball, so npm would show a blank page.')
     }
 
     for (const file of files) {
