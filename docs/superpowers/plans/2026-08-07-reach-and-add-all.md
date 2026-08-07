@@ -488,3 +488,11 @@ git commit -m "docs: document --all and the shadcn install route"
 **The trap in Task 1.** `add` resolves dependencies itself, so `--all` passing every name to `resolveItems` is not wasteful — the resolver deduplicates. Do not try to filter the index down to items nothing depends on; that is a different behaviour and a slower one.
 
 **The trap in Task 3.** `executeCommands` builds `npx`, `pnpm dlx`, `yarn dlx` and `bunx` forms of one command. Pass it `shadcn@latest add <url>` and it produces all four correctly. Do not hand it a string that already starts with `npx`.
+
+## Follow-up this plan deliberately leaves open
+
+The component page now tells every reader that the shadcn route needs no setup, because `shadcn init` writes both the `cn` helper and the theme tokens. That is true today only because every class in `button-variants.tsx` maps onto a token shadcn's default theme ships — and it is true only because an earlier commit stopped the destructive variant using `--destructive-foreground`, which shadcn does not define.
+
+Nothing enforces this. A future component that references a token shadcn lacks will silently turn that sentence into a promise the product does not keep, and it will fail as unstyled text in someone else's project rather than as a failing build in ours.
+
+The guard: collect the `--` custom properties referenced by each `*-variants.tsx`, and assert every one appears in a captured list of shadcn's default `:root` tokens. It belongs in CI, and it should land before or alongside the next component added to the registry.
