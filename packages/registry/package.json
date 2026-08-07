@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "build": "tsx scripts/build-registry.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify-theme-tokens": "tsx scripts/verify-theme-tokens.ts"
   },
   "exports": {
     "./registry": "./src/index.ts",
