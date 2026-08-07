@@ -35,4 +35,22 @@ describe('undefinedCustomProperties', () => {
   test('is not fooled by a property name appearing inside a string', () => {
     expect(undefinedCustomProperties('.a{content:"--ghost"}')).toEqual([])
   })
+
+  test('reads the inner property of a nested fallback, and not the outer one', () => {
+    // `--a` is handled by its fallback. `--b` is the one actually read with
+    // nothing to fall back on, so it is the one worth reporting.
+    expect(undefinedCustomProperties('.a{color:var(--a, var(--b))}')).toEqual(['--b'])
+  })
+
+  test('does not let a commented-out declaration pass for a definition', () => {
+    // The dangerous direction: a definition invented from a comment silences a
+    // property that genuinely nothing defines.
+    expect(undefinedCustomProperties('/* --brand: red */ .a{color:var(--brand)}')).toEqual([
+      '--brand',
+    ])
+  })
+
+  test('does not report a reference that only appears in a comment', () => {
+    expect(undefinedCustomProperties('.a{color:red}/* color:var(--ghost) */')).toEqual([])
+  })
 })

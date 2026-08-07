@@ -12,9 +12,19 @@
  * purpose. The fallback is the author's explicit statement that the
  * property may be absent and that absence is handled, so it is not a defect
  * to report.
+ *
+ * Property-shaped text inside a *string* is still read as code, so
+ * `content: "--x: y"` would be counted as defining `--x`. That direction --
+ * inventing a definition -- is the one that silences a real finding, but it
+ * needs a string containing a colon-terminated property name to happen at
+ * all, which compiled CSS does not produce. Stripping strings safely costs
+ * more than the risk is worth; comments are stripped because they are cheap
+ * and a commented-out theme block is a plausible thing to meet.
  */
 
 const PROPERTY_NAME = '--[a-zA-Z0-9_-]+'
+
+const COMMENT = /\/\*[\s\S]*?\*\//g
 
 const DECLARATION = new RegExp(`(${PROPERTY_NAME})\\s*:`, 'g')
 const AT_PROPERTY = new RegExp(`@property\\s+(${PROPERTY_NAME})`, 'g')
@@ -33,7 +43,12 @@ const matchedNames = (pattern: RegExp, css: string): Set<string> => {
   return names
 }
 
-export const undefinedCustomProperties = (css: string): readonly string[] => {
+export const undefinedCustomProperties = (source: string): readonly string[] => {
+  // Both directions matter here. A commented-out declaration would invent a
+  // definition and silence a real finding; a commented-out reference would
+  // report a property nothing actually reads.
+  const css = source.replace(COMMENT, ' ')
+
   const defined = new Set([...matchedNames(DECLARATION, css), ...matchedNames(AT_PROPERTY, css)])
 
   const referencedWithoutFallback = new Set<string>()
