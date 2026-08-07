@@ -3,6 +3,33 @@ title: Installation
 description: Set a project up to use nat-ui.
 ---
 
+## With the shadcn CLI
+
+If you already have a shadcn project, you do not need the nat-ui CLI. Every
+component is published in shadcn's registry format as well:
+
+```bash
+npx shadcn@latest add https://nat-ui-delta.vercel.app/s/button.json
+```
+
+To install by name instead, add the namespace to your `components.json` once:
+
+```json
+{
+  "registries": {
+    "@nat-ui": "https://nat-ui-delta.vercel.app/s/{name}.json"
+  }
+}
+```
+
+```bash
+npx shadcn@latest add @nat-ui/button
+```
+
+Components arrive as source in your project either way. The nat-ui CLI remains
+the better option for a new project, where `init` writing theme tokens and
+`components.json` is a service rather than an intrusion.
+
 <CliCommand args='init' />
 
 `init` configures a project in one pass. It asks where your stylesheet and
