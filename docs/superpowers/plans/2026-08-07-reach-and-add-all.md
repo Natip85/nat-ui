@@ -489,10 +489,14 @@ git commit -m "docs: document --all and the shadcn install route"
 
 **The trap in Task 3.** `executeCommands` builds `npx`, `pnpm dlx`, `yarn dlx` and `bunx` forms of one command. Pass it `shadcn@latest add <url>` and it produces all four correctly. Do not hand it a string that already starts with `npx`.
 
-## Follow-up this plan deliberately leaves open
+## Follow-up this plan deliberately leaves open — paid
 
 The component page now tells every reader that the shadcn route needs no setup, because `shadcn init` writes both the `cn` helper and the theme tokens. That is true today only because every class in `button-variants.tsx` maps onto a token shadcn's default theme ships — and it is true only because an earlier commit stopped the destructive variant using `--destructive-foreground`, which shadcn does not define.
 
 Nothing enforces this. A future component that references a token shadcn lacks will silently turn that sentence into a promise the product does not keep, and it will fail as unstyled text in someone else's project rather than as a failing build in ours.
 
-The guard: collect the `--` custom properties referenced by each `*-variants.tsx`, and assert every one appears in a captured list of shadcn's default `:root` tokens. It belongs in CI, and it should land before or alongside the next component added to the registry.
+This risk is now guarded against. `packages/registry/scripts/verify-theme-tokens.ts` (built on `undefinedCustomProperties` in `css-custom-properties.ts`) reads a directory of built CSS, finds every custom property read with `var(--x)` and never defined anywhere in it, and fails if it finds one. The `smoke-shadcn` CI job runs it against the real consumer app's `.next` build output — after `shadcn init` and `add` have run and the app has been built — so the check exercises the same theme a real adopter gets, not a static snapshot of one.
+
+What it does not cover is worth knowing before trusting it. It sees only what that one consumer app compiles, so the job installs every item the registry built rather than a list kept by hand — a component named by memory is a component that eventually is not. It checks that a property is _defined_, not that the value is sensible, and it says nothing about whether `.dark` defines everything `:root` does. Custom properties set from JavaScript rather than from a class are invisible to it, which is correct for `--press-scale` because it is read with a fallback, and would not be correct for a future property written inline without one.
+
+The originally proposed approach — collecting the `--` custom properties referenced by each `*-variants.tsx` and comparing against a captured list of shadcn's default `:root` tokens — was rejected in favour of this. A captured snapshot goes stale the moment shadcn changes its default theme, and it cannot see the actual failure mode: the bug only exists once Tailwind has compiled a class into a `var()` declaration in a real build, and a source-level scan of `*-variants.tsx` has no built CSS to check that against. Scanning a genuine `shadcn init` + `add` + `next build` consumer, as the CI job now does, checks the thing that actually ships rather than a proxy for it, and never needs updating when shadcn's theme does.
