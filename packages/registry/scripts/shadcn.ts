@@ -62,9 +62,14 @@ export const toShadcnItem = (
   ...(item.registryDependencies === undefined
     ? {}
     : {
-        // Only ours become URLs. A name this registry does not define is a
-        // shadcn item the user's own setup resolves, and rewriting it would
-        // point at a nat-ui document that does not exist.
+        // Only ours become URLs; a name this registry does not define is
+        // left as a bare shadcn name. `assertResolvableGraph` in
+        // build-registry.ts currently throws on exactly that case before an
+        // item reaches here, so this branch is unreachable in the build
+        // today. It stays because that check is what needs to change, not
+        // this mapping: the day it learns to allow an external name, this is
+        // already the correct thing to do with it, and rewriting it to a
+        // nat-ui URL would 404.
         registryDependencies: item.registryDependencies.map((name) =>
           known.has(name) ? `${baseUrl}/${name}.json` : name,
         ),

@@ -26,6 +26,14 @@ const payload: RegistryItemPayload = {
 
 const known = new Set(['button', 'motion'])
 
+// The other tests here compare against the constant, so they would follow it
+// anywhere. This is what actually ends up in every published document when
+// no override is set, and the production deploy build never sets one, so
+// pin the literal and make changing it deliberate.
+test('DEFAULT_SHADCN_BASE_URL points at the deployed shadcn registry', () => {
+  expect(DEFAULT_SHADCN_BASE_URL).toBe('https://nat-ui-delta.vercel.app/s')
+})
+
 describe('shadcnTypeOf', () => {
   test('namespaces both installable types', () => {
     expect(shadcnTypeOf('ui')).toBe('registry:ui')
@@ -67,10 +75,12 @@ describe('toShadcnItem', () => {
   })
 
   test('leaves a plain shadcn dependency alone', () => {
-    // `input` is shadcn's, not ours. Rewriting it to a nat-ui URL would 404,
-    // and this passthrough is what lets a component build on whatever the
-    // user's shadcn setup already installed instead of nat-ui shipping a
-    // duplicate primitive.
+    // `input` is shadcn's, not ours. Rewriting it to a nat-ui URL would 404.
+    // `assertResolvableGraph` in build-registry.ts throws on a
+    // registryDependencies name this registry does not define, so no item
+    // can reach this passthrough in the build today -- it exists for the day
+    // that check learns to allow an external name, at which point this is
+    // already the right thing to do with it.
     const dependent: RegistrySourceItem = {...source, registryDependencies: ['motion', 'input']}
     const item = toShadcnItem(dependent, payload, 'https://example.test/s', known)
 
