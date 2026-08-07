@@ -12,6 +12,7 @@ import {
   packageNameOf,
   registryDependencyCycles,
   serialize,
+  shadcnOutputDirectories,
   toIndex,
   toPayload,
   undeclaredDependencies,
@@ -179,6 +180,15 @@ describe('outputDirectories', () => {
       join('/repo', 'r'),
       join('/repo', 'apps', 'docs', 'public', 'r'),
     ])
+  })
+})
+
+describe('shadcnOutputDirectories', () => {
+  test('writes the committed tree and the served one', () => {
+    const [committed, served] = shadcnOutputDirectories('/repo/packages/registry')
+
+    expect(committed).toBe(join('/repo', 's'))
+    expect(served).toBe(join('/repo', 'apps', 'docs', 'public', 's'))
   })
 })
 

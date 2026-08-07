@@ -12,6 +12,7 @@ import {
   registryItemPayloadSchema,
 } from '@nat-ui/schema'
 import {items, type RegistrySourceItem} from '../src/index'
+import {DEFAULT_SHADCN_BASE_URL, toShadcnItem} from './shadcn'
 
 /**
  * Everything emitted here is compared byte-for-byte against what is committed,
@@ -262,6 +263,15 @@ export const outputDirectories = (packageRoot: string): string[] => [
   join(packageRoot, '..', '..', 'apps', 'docs', 'public', 'r'),
 ]
 
+/**
+ * Committed for the same reason `r/` is — a guard can only compare bytes it can
+ * see — and generated into the docs app, which is what actually serves them.
+ */
+export const shadcnOutputDirectories = (packageRoot: string): string[] => [
+  join(packageRoot, '..', '..', 's'),
+  join(packageRoot, '..', '..', 'apps', 'docs', 'public', 's'),
+]
+
 const main = async (): Promise<void> => {
   const here = dirname(fileURLToPath(import.meta.url))
   const packageRoot = join(here, '..')
@@ -300,7 +310,34 @@ const main = async (): Promise<void> => {
     }
   }
 
-  console.log(`Wrote ${String(payloads.length)} registry item(s) to r/.`)
+  // Overridable so the shadcn smoke test can install from a local server: the
+  // cross-references live inside the documents, so a build serving localhost
+  // has to say localhost.
+  const shadcnBaseUrl = process.env.NAT_UI_SHADCN_BASE_URL ?? DEFAULT_SHADCN_BASE_URL
+  const known = new Set(items.map((item) => item.name))
+  // Looked up by name rather than by index. `payloads` happens to be in the
+  // same order as a re-sorted `items` today, and pairing them positionally
+  // would silently mis-associate every document the day either sort changes.
+  const payloadsByName = new Map(payloads.map((payload) => [payload.name, payload] as const))
+  const shadcnDocuments = new Map<string, string>(
+    [...items].sort(byName).map((item): [string, string] => {
+      const payload = payloadsByName.get(item.name)
+      if (payload === undefined) throw new Error(`No payload was built for "${item.name}".`)
+
+      return [`${item.name}.json`, serialize(toShadcnItem(item, payload, shadcnBaseUrl, known))]
+    }),
+  )
+
+  for (const outputDir of shadcnOutputDirectories(packageRoot)) {
+    await rm(outputDir, {recursive: true, force: true})
+    await mkdir(outputDir, {recursive: true})
+
+    for (const [name, document] of shadcnDocuments) {
+      await writeFile(join(outputDir, name), document)
+    }
+  }
+
+  console.log(`Wrote ${String(payloads.length)} registry item(s) to r/ and s/.`)
 }
 
 // Only run when invoked as a script, so the tests above can import the pure

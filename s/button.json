@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "button",
+  "type": "registry:ui",
+  "title": "Button",
+  "description": "A button whose press is a spring rather than a transition, with smooth, snappy and bouncy presets.",
+  "dependencies": [
+    "@base-ui/react",
+    "class-variance-authority"
+  ],
+  "registryDependencies": [
+    "https://nat-ui-delta.vercel.app/s/motion.json"
+  ],
+  "files": [
+    {
+      "path": "components/ui/button.tsx",
+      "type": "registry:ui",
+      "content": "'use client'\n\nimport {Button as BaseButton} from '@base-ui/react/button'\nimport type {VariantProps} from 'class-variance-authority'\nimport type {ComponentProps} from 'react'\nimport {buttonVariants} from '@/components/ui/button-variants'\nimport {type AnimationPreset, DEFAULT_PRESET, pressStyle} from '@/lib/motion'\nimport {useResolvedPreset} from '@/lib/use-motion'\nimport {cn} from '@/lib/utils'\n\n/**\n * `className` is narrowed to a string. Base UI also accepts a function of the\n * component's state there, but `cn` composes strings, and no variant here needs\n * state to decide its classes.\n */\nexport type ButtonProps = Omit<ComponentProps<typeof BaseButton>, 'className'> &\n  VariantProps<typeof buttonVariants> & {\n    className?: string\n    /** How the press responds. Independent of `variant` and `size`. */\n    animation?: AnimationPreset\n  }\n\nexport function Button({\n  className,\n  variant,\n  size,\n  animation = DEFAULT_PRESET,\n  style,\n  ...props\n}: ButtonProps) {\n  const preset = useResolvedPreset(animation)\n  // Spread last so a caller's own style wins, the same way `className` does.\n  const press = pressStyle(preset)\n\n  return (\n    <BaseButton\n      className={cn(buttonVariants({variant, size, className}))}\n      style={{...press, ...style}}\n      {...props}\n    />\n  )\n}\n"
+    },
+    {
+      "path": "components/ui/button-variants.tsx",
+      "type": "registry:ui",
+      "content": "import {cva} from 'class-variance-authority'\n\n/**\n * Split from `button.tsx` because that module carries `'use client'` for the\n * `animation` prop's hooks, and a directive makes every export of a module a\n * client reference -- including a pure `cva` call. Server components (a\n * `<Link>` styled to look like a button, for instance) need to call this\n * function directly, which only works from a module with no directive at all.\n *\n * The press depth is read from `--press-scale`, which `pressStyle` sets from\n * the chosen preset. The fallback keeps a bare `buttonVariants()` pressable on\n * its own, for anyone who wants the look without importing the motion layer.\n *\n * The reduced-motion overrides are `!important` because they have to beat an\n * inline style, and nothing less does. `Button` already collapses its preset\n * through a hook, but a server-rendered `<Link>` cannot run one, so without\n * these it would keep pressing at full depth for a reader who asked the whole\n * system to stop moving.\n */\nexport const buttonVariants = cva(\n  'inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium will-change-transform active:scale-[var(--press-scale,0.96)] motion-reduce:transition-none! motion-reduce:active:scale-100! focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',\n  {\n    variants: {\n      variant: {\n        default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',\n        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',\n        outline:\n          'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',\n        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',\n        ghost: 'hover:bg-accent hover:text-accent-foreground',\n        link: 'text-primary underline-offset-4 hover:underline',\n      },\n      size: {\n        sm: 'h-8 rounded-md px-3 text-xs',\n        default: 'h-9 px-4 py-2',\n        lg: 'h-10 rounded-md px-8',\n        icon: 'size-9',\n      },\n    },\n    defaultVariants: {variant: 'default', size: 'default'},\n  },\n)\n"
+    }
+  ]
+}
