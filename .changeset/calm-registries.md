@@ -6,9 +6,11 @@ Publishes every registry item in shadcn's `registry-item` format at
 `/s/{name}.json`, so an existing shadcn project can install nat-ui components
 with `npx shadcn add` and never install the nat-ui CLI at all.
 
-The nat-ui format at `/r/{name}.json` is unchanged byte-for-byte — published
-CLIs bake that URL into their bundle — and the two formats are serialised from
-one in-memory item list, so they cannot drift.
+The nat-ui format at `/r/{name}.json` gains no key and changes no shape, which
+is what matters: published CLIs bake that URL into their bundle and validate
+what they fetch against a strict schema, so a new key would break installs on a
+version nobody can patch. Both formats are serialised from one in-memory item
+list, so they cannot drift.
 
 Cross-references between items are absolute URLs rather than namespaced names,
 because a namespaced reference only resolves once the user has configured the

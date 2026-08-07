@@ -14,7 +14,7 @@
 - `pnpm build` regenerates `r/` and now `s/`, both committed. CI runs `git diff --exit-code -- r s`, so run `pnpm build` and commit the result whenever a component, the `items` array, or the mapping changes.
 - Registry item names match `/^[a-z0-9]+(-[a-z0-9]+)*$/`.
 - `REGISTRY_SCHEMA_VERSION` stays `'1'`. Do not add keys to `registryItemSchema` or `registryItemPayloadSchema` — they are `z.strictObject` compiled into every published CLI, and a new key breaks installed clients. The shadcn metadata added in Task 1 lives in the registry package, never in `@nat-ui/schema`.
-- `/r/` output must not change by a single byte in this plan. Task 1 has an explicit guard for that; if `git diff -- r` is ever non-empty after a build in this plan, something is wrong.
+- `/r/` output must not change by a single byte in Tasks 1 through 5. Task 1 has an explicit guard for that; if `git diff -- r` is non-empty after a build in those tasks, something is wrong. (Superseded after Task 5: a final-review fix deliberately changed the button's `destructive` classes, which changes `r/button.json`'s content. The permanent constraint is the narrower one — no key may be added or removed, because that is what published CLIs validate.)
 - The published site is `https://nat-ui-delta.vercel.app`. The nat-ui registry is served from `/r`, the shadcn one from `/s`.
 - Run `pnpm test`, `pnpm lint`, and `pnpm typecheck` before every commit.
 
