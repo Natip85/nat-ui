@@ -24,6 +24,7 @@ export const help = `
   Options
     -y, --yes            Accept every default without asking
         --overwrite      Replace files that already exist
+        --all            Add every component in the registry
         --registry <url> Use a different registry
     -v, --version        Print the version
     -h, --help           Show this message
@@ -63,6 +64,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
   let values: {
     yes: boolean
     overwrite: boolean
+    all: boolean
     registry?: string | undefined
     version: boolean
     help: boolean
@@ -75,6 +77,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
       options: {
         yes: {type: 'boolean', short: 'y', default: false},
         overwrite: {type: 'boolean', default: false},
+        all: {type: 'boolean', default: false},
         registry: {type: 'string'},
         version: {type: 'boolean', short: 'v', default: false},
         help: {type: 'boolean', short: 'h', default: false},
@@ -107,8 +110,8 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
   }
 
   if (command === 'init') {
-    if (values.overwrite === true || values.registry !== undefined) {
-      log(`init takes neither --overwrite nor --registry.\n${help}`)
+    if (values.overwrite === true || values.all === true || values.registry !== undefined) {
+      log(`init takes none of --overwrite, --all or --registry.\n${help}`)
 
       return 1
     }
@@ -149,6 +152,7 @@ export const run = async (argv: readonly string[], log: Log): Promise<number> =>
         names: positionals.slice(1),
         yes: values.yes ?? false,
         overwrite: values.overwrite ?? false,
+        all: values.all ?? false,
         registry: values.registry,
       },
     )

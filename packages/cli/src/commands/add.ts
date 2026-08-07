@@ -26,6 +26,7 @@ export interface AddIo {
 
 export interface AddOptions {
   names: readonly string[]
+  all: boolean
   yes: boolean
   overwrite: boolean
   registry: string | undefined
@@ -55,14 +56,37 @@ const withAvailable = async (baseUrl: string, io: AddIo, message: string): Promi
 export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   const baseUrl = resolveBaseUrl(options.registry, io.env)
 
-  if (options.names.length === 0) {
-    io.log(await withAvailable(baseUrl, io, 'Name at least one component to add.'))
+  if (options.all && options.names.length > 0) {
+    io.log('Pass either --all or component names, not both.')
+
+    return 1
+  }
+
+  let requested: readonly string[]
+  if (options.all) {
+    try {
+      requested = (await fetchIndex(baseUrl, io.fetchJson)).items.map((entry) => entry.name)
+    } catch (error) {
+      io.log(messageOf(error))
+
+      return 1
+    }
+  } else {
+    requested = options.names
+  }
+
+  if (requested.length === 0) {
+    io.log(
+      options.all
+        ? 'The registry lists no components.'
+        : await withAvailable(baseUrl, io, 'Name at least one component to add.'),
+    )
 
     return 1
   }
 
   try {
-    for (const name of options.names) assertValidItemName(name)
+    for (const name of requested) assertValidItemName(name)
   } catch (error) {
     io.log(messageOf(error))
 
@@ -93,7 +117,7 @@ export const add = async (io: AddIo, options: AddOptions): Promise<number> => {
   // Everything that can fail happens here, before a single file is touched.
   let items: RegistryItemPayload[]
   try {
-    items = await resolveItems(options.names, (name) => fetchItem(baseUrl, name, io.fetchJson))
+    items = await resolveItems(requested, (name) => fetchItem(baseUrl, name, io.fetchJson))
   } catch (error) {
     io.log(await withAvailable(baseUrl, io, messageOf(error)))
 
