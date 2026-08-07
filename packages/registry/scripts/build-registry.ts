@@ -11,7 +11,7 @@ import {
   registryIndexSchema,
   registryItemPayloadSchema,
 } from '@nat-ui/schema'
-import {items} from '../src/index'
+import {items, type RegistrySourceItem} from '../src/index'
 
 /**
  * Everything emitted here is compared byte-for-byte against what is committed,
@@ -106,7 +106,7 @@ const INSTALLABLE_ITEM_TYPES = new Set<RegistryItemType>(['ui', 'lib'])
 const INSTALLABLE_FILE_TYPES = new Set<RegistryItemFileType>(['ui', 'lib'])
 
 export const toPayload = (
-  item: RegistryItem,
+  item: RegistrySourceItem,
   read: (path: string) => string,
 ): RegistryItemPayload => {
   if (!INSTALLABLE_ITEM_TYPES.has(item.type)) {
@@ -147,7 +147,19 @@ export const toPayload = (
     return {...file, content}
   })
 
-  return registryItemPayloadSchema.parse({schemaVersion: REGISTRY_SCHEMA_VERSION, ...item, files})
+  // Picked one key at a time rather than spread: `item` now carries shadcn's
+  // title and description, and the payload schema is strict, so a spread would
+  // fail the build the moment metadata was added.
+  return registryItemPayloadSchema.parse({
+    schemaVersion: REGISTRY_SCHEMA_VERSION,
+    name: item.name,
+    type: item.type,
+    ...(item.dependencies === undefined ? {} : {dependencies: item.dependencies}),
+    ...(item.registryDependencies === undefined
+      ? {}
+      : {registryDependencies: item.registryDependencies}),
+    files,
+  })
 }
 
 /**
