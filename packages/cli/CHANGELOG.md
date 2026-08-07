@@ -1,5 +1,63 @@
 # @nat-ui/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 61dd090: `add` can now install `lib` items, which is what lets components share the
+  motion token layer. Lib files go to the `lib` alias from `components.json`, or,
+  for configs written before that alias existed, to the directory holding
+  `utils`. Imports of `@/lib/<name>` are rewritten alongside `@/lib/utils` and
+  `@/components/ui/*`.
+
+  `input` and `dialog` have been removed from the registry. Copies already
+  installed are unaffected — they are files your project owns — but
+  `nat-ui add input` and `nat-ui add dialog` now fail with a not-found error.
+
+  `button`'s `buttonVariants` has moved out of `button.tsx` into its own
+  `button-variants.tsx`, and `nat-ui add button` now installs both files.
+  `button.tsx` carries `'use client'` for its `animation` prop, which makes every
+  export of that module a client reference — including `buttonVariants`, a plain
+  class-name function that Server Components need to call directly (for example,
+  to style a `<Link>` as a button). Splitting it out is what makes that call
+  possible again. If your project already has `button`, update your import of
+  `buttonVariants` to `@/components/ui/button-variants`.
+
+  For the same reason the `motion` item now ships two files. `lib/motion.ts`
+  holds the presets, easings and `transitionStyle`, and no longer carries a
+  directive, so a Server Component can style a link with the same spring a
+  `Button` uses. The reduced-motion hooks moved to `lib/use-motion.ts`, which
+  does carry one — a module cannot be imported by a Server Component if it so
+  much as imports `useState`.
+
+### Patch Changes
+
+- 6b16663: Retunes the animation presets so they are actually distinguishable, and fixes
+  the reason they were not.
+
+  The press never animated. Tailwind compiles `scale-*` to the independent
+  `scale` property, which CSS Transforms Level 2 keeps separate from `transform`,
+  and the transition named only `transform` — so every preset snapped instantly
+  to its pressed size and the spring shaping it was never applied. `pressStyle`
+  now names `scale` as well.
+
+  The presets were also tuned too close together to tell apart even once they
+  animate: all three settled within 49ms of each other, differing only in
+  overshoot, which on a 4% press came to half a pixel. `smooth`, `snappy` and
+  `bouncy` now settle in 285ms, 120ms and 901ms, and each sets its own press
+  depth, since overshoot is a proportion of the distance travelled and a bounce
+  needs room to happen in.
+
+  Adds `PRESS_SCALES` and `pressStyle` to `lib/motion.ts`. `buttonVariants` reads
+  its press depth from a `--press-scale` custom property, falling back to `0.96`
+  so it stays usable on its own.
+
+- f9ffd9e: Say what to do when no Tailwind stylesheet is found. The message offered only
+  "run without `--yes` to supply one", which is no help to a project that has no
+  Tailwind at all — the common case, since `create-vite` ships none. It now names
+  setting Tailwind up as the first thing to try, and keeps the original advice for
+  a stylesheet that merely lives somewhere unconventional.
+
 ## 0.3.0
 
 ### Minor Changes
