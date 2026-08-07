@@ -13,6 +13,14 @@
  * property may be absent and that absence is handled, so it is not a defect
  * to report.
  *
+ * It is also scope-blind: a definition anywhere in the sheet satisfies a
+ * reference anywhere else, even when the defining selector could never match
+ * an ancestor of the element doing the reading. That cannot be decided from
+ * CSS alone -- it depends on a DOM this never sees -- so the alternative is
+ * not a stricter check but a different kind of tool. It costs nothing for
+ * what this guards: theme tokens are defined on `:root` and `.dark`, which
+ * are ancestors of everything.
+ *
  * Property-shaped text inside a *string* is still read as code, so
  * `content: "--x: y"` would be counted as defining `--x`. That direction --
  * inventing a definition -- is the one that silences a real finding, but it
