@@ -406,6 +406,7 @@ git commit -m "feat(registry): map nat-ui items to shadcn registry items"
 - Modify: `packages/registry/scripts/build-registry.ts:243-292`
 - Modify: `packages/registry/scripts/build-registry.test.ts`
 - Modify: `.gitignore:27`
+- Modify: `.prettierignore` — `s/` and `apps/docs/public/s`, mirroring the `r/` entries already there. `JSON.stringify` output is not Prettier-formatted, so `format:check` fails without this.
 
 **Interfaces:**
 
