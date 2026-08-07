@@ -6,6 +6,11 @@ description: The two commands, and every flag they take.
 The CLI has two commands. `init` configures a project; `add` copies components
 into it.
 
+If your project already uses shadcn, you can skip this CLI entirely — every
+component is published in shadcn's registry format too, and
+[installation](/docs/installation) shows how to add one with the CLI you
+already have.
+
 ```
 nat-ui <command> [options]
 
@@ -16,6 +21,7 @@ Commands
 Options
   -y, --yes            Accept every default without asking
       --overwrite      Replace files that already exist
+      --all            Add every component in the registry
       --registry <url> Use a different registry
   -v, --version        Print the version
   -h, --help           Show this message
@@ -30,8 +36,9 @@ edited](#replacing-files-you-have-already-edited) has the details.
 ## `init`
 
 Covered in [Installation](/docs/installation). It takes `--yes` and nothing
-else: passing `--overwrite` or `--registry` to it is an error rather than a
-silent no-op, because both would suggest a behaviour it does not have.
+else: passing `--overwrite`, `--all`, or `--registry` to it is an error rather
+than a silent no-op, because all three would suggest a behaviour it does not
+have.
 
 ## `add`
 
@@ -56,6 +63,20 @@ covers `--yes`: adding a component you already have with `add button --yes`
 prints `Left components/ui/button.tsx alone, since it already exists.` and exits
 0 without writing anything. If what you want is an update — in a CI job, say —
 `--overwrite` is the flag to reach for, on its own or alongside `--yes`.
+
+### Installing everything
+
+`--all` installs every item the registry lists, libraries included, rather
+than only the components you name:
+
+<CliCommand args='add --all' />
+
+Passing it alongside component names is an error rather than a merge, since
+obeying one would mean ignoring the other:
+
+```
+Pass either --all or component names, not both.
+```
 
 ### Pointing at a different registry
 

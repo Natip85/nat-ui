@@ -15,6 +15,17 @@ Documentation, with live examples for every component:
 
 ## Quick start
 
+### Already using shadcn?
+
+You don't need this CLI. Every component is published in shadcn's registry
+format as well:
+
+```bash
+npx shadcn@latest add https://nat-ui-delta.vercel.app/s/button.json
+```
+
+### With the nat-ui CLI
+
 ```bash
 pnpm dlx @nat-ui/cli@latest init
 npx @nat-ui/cli@latest add button
@@ -23,7 +34,8 @@ npx @nat-ui/cli@latest add button
 `init` configures a project in one pass and writes `components.json`. `add`
 reads that config, so components land where you already keep things, with
 imports rewritten to your aliases. Naming a component pulls in whatever it
-depends on, so `add button` also writes the shared `motion` module.
+depends on, so `add button` also writes the shared `motion` module. To take
+everything at once, `add --all`.
 
 Available components: `button`.
 

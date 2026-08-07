@@ -19,6 +19,10 @@ describe('help', () => {
   test('documents the -y shorthand alongside --yes', () => {
     expect(help).toContain('-y, --yes')
   })
+
+  test('documents --all', () => {
+    expect(help).toMatch(/--all/)
+  })
 })
 
 describe('run', () => {
@@ -97,6 +101,17 @@ describe('run', () => {
         lines.push(message),
       ),
     ).toBe(1)
+  })
+
+  test('add --all reaches the command with all set', async () => {
+    // The flag has to survive parseArgs and arrive as an option, which is the
+    // one thing a test of `add` itself cannot cover.
+    const lines: string[] = []
+
+    expect(
+      await run(['add', '--all', '--registry', 'https://r.test'], (message) => lines.push(message)),
+    ).not.toBe(0)
+    expect(lines.join('\n')).not.toMatch(/Unknown option/)
   })
 
   test('dispatches a bare init with no stray positionals to the init command', async () => {

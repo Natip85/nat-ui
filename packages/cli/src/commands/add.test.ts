@@ -126,6 +126,7 @@ const makeIo = (overrides: Partial<AddIo> = {}): AddIo & {logs: string[]} => {
 
 const options = (over: Partial<Parameters<typeof add>[1]> = {}) => ({
   names: ['button'],
+  all: false,
   yes: false,
   overwrite: false,
   registry: 'https://r.test',
@@ -575,5 +576,61 @@ describe('add', () => {
     await add(io, options({names: ['springy']}))
 
     expect(io.logs.join('\n')).not.toMatch(/different versions/)
+  })
+
+  test('--all installs every item the registry lists', async () => {
+    const io = makeIo({
+      fetchJson: (url) => {
+        if (url.endsWith('/index.json')) {
+          return Promise.resolve({
+            status: 200,
+            body: JSON.stringify({
+              schemaVersion: '1',
+              items: [
+                {name: 'button', type: 'ui'},
+                {name: 'motion', type: 'lib'},
+              ],
+            }),
+          })
+        }
+
+        return fetchJson(url)
+      },
+    })
+
+    const code = await add(io, options({names: [], all: true}))
+
+    expect(code).toBe(0)
+    expect(await read('src/components/ui/button.tsx')).toBe(buttonSource)
+    expect(await read('src/lib/motion.ts')).toBe(motionSource)
+  })
+
+  test('--all and a named component together are a usage error', async () => {
+    const io = makeIo()
+
+    const code = await add(io, options({names: ['button'], all: true}))
+
+    expect(code).toBe(1)
+    expect(io.logs.join('\n')).toMatch(/--all/)
+  })
+
+  test('--all on an empty registry says so rather than succeeding silently', async () => {
+    const io = makeIo({
+      fetchJson: (url) => {
+        if (url.endsWith('/index.json')) {
+          return Promise.resolve({
+            status: 200,
+            body: JSON.stringify({schemaVersion: '1', items: []}),
+          })
+        }
+
+        return fetchJson(url)
+      },
+    })
+
+    const code = await add(io, options({names: [], all: true}))
+
+    expect(code).toBe(1)
+    expect(io.logs.join('\n')).toMatch(/no components/i)
   })
 })

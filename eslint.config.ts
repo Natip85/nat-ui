@@ -11,7 +11,11 @@ export default tseslint.config(
       '**/.pnpm-store/**',
       '**/.next/**',
       'apps/docs/public/r/**',
+      'apps/docs/public/s/**',
       '**/.source/**',
+      // Gitignored scratch space for planning and verification scripts, which
+      // are not part of any tsconfig and so cannot be type-checked as source.
+      '.superpowers/**',
     ],
   },
   js.configs.recommended,

@@ -3,18 +3,20 @@ import {Tab, Tabs} from 'fumadocs-ui/components/tabs'
 import Link from 'next/link'
 import {executeCommands, installCommands} from '@/lib/package-manager'
 import {resolvePayloads} from '@/lib/registry-payload'
-import {cliPackage} from '@/lib/shared'
+import {cliPackage, siteUrl} from '@/lib/shared'
 import {CollapsibleCode} from './collapsible-code'
 import {CommandTabs} from './command-tabs'
 
 /**
- * Two routes to the same result. The CLI is the one to reach for; the manual
- * steps are for projects that would rather paste the source than run a binary,
- * and for anyone who wants to see what the CLI is about to do.
+ * Three routes to the same result. shadcn is the one to reach for if the
+ * project already has that CLI, since its own `init` already did the setup
+ * the other two routes still need; the nat-ui CLI is for a project that does
+ * not; the manual steps are for anyone who would rather paste the source
+ * directly or see what either CLI is about to do.
  *
  * Everything here is derived from the built registry — the npm packages, the
  * files, and the components pulled in by dependency — so a page can never
- * promise an install that differs from the one the CLI performs.
+ * promise an install that differs from the one either CLI performs.
  */
 export async function ComponentInstallation({item}: {item: string}) {
   const payloads = await resolvePayloads(item)
@@ -23,19 +25,25 @@ export async function ComponentInstallation({item}: {item: string}) {
 
   return (
     <>
-      {/* Neither route stands alone: the files below import `cn` from the utils
-          alias and are styled against the theme tokens, both of which init
-          writes. Saying so here is the difference between two routes to the
-          same result and one route that does not compile. */}
+      {/* Naming the precondition is still the difference between a route to the
+          same result and one that does not compile, so it cannot be dropped now
+          that a route exists without it. The shadcn route is the exemption
+          rather than the rule: `shadcn init` writes the `cn` helper and the
+          theme tokens itself, which is the whole reason it leads. */}
       <p>
-        Both routes assume <Link href='/docs/installation'>{`${cliPackage} init`}</Link> has already
-        run in this project. It writes the <code>cn</code> helper these files import, installs{' '}
-        <code>clsx</code> and <code>tailwind-merge</code>, and adds the theme tokens they are styled
-        against.
+        Install with whichever CLI your project already has. The{' '}
+        <Link href='/docs/installation'>nat-ui CLI</Link> and manual routes assume{' '}
+        <code>{`${cliPackage} init`}</code> has run, because the files below import <code>cn</code>{' '}
+        from your utils alias and are styled against the theme tokens it writes. The shadcn route
+        needs none of that — <code>shadcn init</code> has already written both.
       </p>
 
-      <Tabs items={['Command', 'Manual']}>
-        <Tab value='Command'>
+      <Tabs items={['shadcn', 'nat-ui CLI', 'Manual']}>
+        <Tab value='shadcn'>
+          <CommandTabs commands={executeCommands(`shadcn@latest add ${siteUrl}/s/${item}.json`)} />
+        </Tab>
+
+        <Tab value='nat-ui CLI'>
           <CommandTabs commands={executeCommands(`${cliPackage}@latest add ${item}`)} />
         </Tab>
 
