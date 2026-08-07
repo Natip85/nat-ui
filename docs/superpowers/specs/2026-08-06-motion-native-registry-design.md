@@ -198,14 +198,23 @@ generated source.
 
 ### Presets, and why choreography is fixed
 
-| Preset   | Stiffness | Damping | Character                                    |
-| -------- | --------- | ------- | -------------------------------------------- |
-| `smooth` | 1080      | 65      | Large travel, zero overshoot                 |
-| `snappy` | 1400      | 43      | Very fast, overshoots once — **the default** |
-| `bouncy` | 5200      | 35      | Several visible oscillations                 |
+| Preset   | Stiffness | Damping | Settles | Presses to | Character                               |
+| -------- | --------- | ------- | ------- | ---------- | --------------------------------------- |
+| `smooth` | 1200      | 69      | 387ms   | 0.96       | Zero overshoot                          |
+| `snappy` | 3775      | 80      | 200ms   | 0.94       | Fast, overshoots once — **the default** |
+| `bouncy` | 575       | 15      | 960ms   | 0.88       | Seven defined oscillations              |
 
-Mass is 1 throughout. These were chosen by feel, in a browser, against live
-demos rather than on paper.
+Mass is 1 throughout.
+
+An earlier revision of this table held all three to roughly 400ms and varied
+only the damping ratio. Shipped, the three were indistinguishable — see the
+contract below for why that followed from the rule this spec used to state.
+Duration now spans 200ms to 960ms, and press depth varies alongside it.
+
+Nothing is tuned below about 180ms. Under roughly 150ms the eye stops reading
+movement and registers a jump instead, which is the line between crisp and
+abrupt. Damping ratios are likewise kept high enough to settle in a few defined
+oscillations rather than a long tail of tiny ones, which reads as buzz.
 
 `none` exists as a fourth value but is not a personality — it is the target
 `prefers-reduced-motion` collapses everything to.
@@ -219,19 +228,28 @@ nobody ships oscillating inputs on a settings page. `smooth` as the default
 undersells the premise. Defaulting to `snappy` with `bouncy` one prop away gets
 both.
 
-**The presets change physics, never choreography.** How far a press travels,
-how far a panel rises, how deep a scale goes — all identical across presets.
-Only stiffness and damping vary.
+**The presets change how far and how fast, never what.** A press is a press
+under every preset. No preset adds a rotation, a slide, or a stage that another
+one lacks, and nothing moves under `bouncy` that sat still under `smooth`. What
+varies is duration and the distance covered — for a button press, the three
+depths and durations in the table above.
 
-This matters more than it appears. If `bouncy` also moved further than `smooth`,
-the prop would change two things at once and nobody could predict the effect of
-switching it across thirty components. Fixing choreography and varying physics
-is what makes the prop comprehensible at scale.
+This matters more than it appears. The prop stays predictable across thirty
+components precisely because switching it can only change the intensity of a
+gesture you have already seen, never introduce one you have not.
 
-The choreography itself is deliberately loud — a press scales to 0.80, panels
-enter from 0.35 scale and 28px below. "In your face" is a property of nat-ui as
-a whole, not something reserved for the bounciest setting, because it is the
-specialisation.
+An earlier draft drew the line one notch tighter, fixing distance as well and
+varying only stiffness and damping, on the theory that a prop changing one
+thing is easier to reason about than a prop changing two. That was wrong in a
+specific and instructive way. Overshoot is a proportion of the distance
+travelled, so pinning distance while varying only the spring left `bouncy`
+overshooting across half a pixel: the prop stayed perfectly predictable by
+becoming imperceptible. Distance and duration are what the eye reads, so they
+belong to the preset.
+
+The choreography itself is deliberately loud — panels enter from 0.35 scale and
+28px below. "In your face" is a property of nat-ui as a whole, not something
+reserved for the bounciest setting, because it is the specialisation.
 
 ### The extension not being built
 

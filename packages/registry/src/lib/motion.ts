@@ -21,21 +21,37 @@ export interface Spring {
 }
 
 /**
- * The damping ratio -- c / (2·√(k·m)), which sets how far a spring overshoots
- * and how many times it crosses rest -- was chosen by feel against live demos.
- * The absolute stiffness and damping are not: they are scaled up together,
- * ratio held fixed, until each preset settles in roughly 400ms. A live
- * simulation hides a spring's long low-amplitude tail as sub-pixel wobble, but
- * these constants also drive a fixed-duration CSS transition, where that same
- * tail becomes part of the declared length instead of something invisible.
- * Presets vary physics only -- travel distance and scale depth are fixed by
- * each component, so switching preset changes how a thing moves and never
- * what it does.
+ * Two things separate one preset from another, and the eye is far more
+ * sensitive to the first: how long the motion lasts, and how far it overshoots.
+ * An earlier tuning held all three to roughly 400ms and let only the damping
+ * ratio vary, which is theoretically the "same feel, different character" --
+ * and in practice produced three presets nobody could tell apart, because the
+ * whole difference amounted to half a pixel on a button. Duration now spans
+ * 200ms to 950ms deliberately.
+ *
+ * Nothing sits below ~180ms, because under roughly 150ms the eye stops reading
+ * movement and registers a jump instead -- which is what separates crisp from
+ * abrupt. The damping ratios are also kept high enough that each preset
+ * settles in a few defined oscillations rather than a long tail of tiny ones,
+ * since that tail reads as buzz rather than bounce.
  */
 export const SPRINGS: Record<Exclude<AnimationPreset, 'none'>, Spring> = {
-  smooth: {stiffness: 1080, damping: 65, mass: 1},
-  snappy: {stiffness: 1400, damping: 43, mass: 1},
-  bouncy: {stiffness: 5200, damping: 35, mass: 1},
+  smooth: {stiffness: 1200, damping: 69, mass: 1},
+  snappy: {stiffness: 3775, damping: 80, mass: 1},
+  bouncy: {stiffness: 575, damping: 15, mass: 1},
+}
+
+/**
+ * How far a press travels, as a scale factor. This varies per preset for the
+ * same reason duration does: overshoot is a proportion of the distance
+ * covered, so a spring that overshoots by half of a 4% press moves less than a
+ * pixel and reads as no bounce at all. `bouncy` needs room to bounce in.
+ */
+export const PRESS_SCALES: Record<AnimationPreset, number> = {
+  smooth: 0.96,
+  snappy: 0.94,
+  bouncy: 0.88,
+  none: 1,
 }
 
 export const DEFAULT_PRESET: AnimationPreset = 'snappy'
@@ -114,3 +130,23 @@ export const transitionStyle = (
   transitionDuration: `${String(DURATIONS_MS[preset])}ms`,
   transitionTimingFunction: EASINGS[preset],
 })
+
+/**
+ * Everything a pressable surface needs: the timing, plus the press depth as a
+ * custom property so `:active` can stay in CSS. Handing back both means a
+ * `<Link>` styled with `buttonVariants` presses exactly like a `Button`,
+ * rather than inheriting the scale while losing the spring that shapes it.
+ *
+ * `scale` is listed alongside `transform` and is not redundant. Tailwind
+ * compiles `scale-*` to the independent `scale` property, which CSS Transforms
+ * Level 2 keeps separate from `transform` -- naming only the latter animates
+ * nothing, and the press snaps instantly however the spring is tuned.
+ */
+export const pressStyle = (
+  preset: AnimationPreset,
+  properties = 'scale, transform, background-color, color',
+): CSSProperties =>
+  ({
+    ...transitionStyle(preset, properties),
+    '--press-scale': PRESS_SCALES[preset],
+  }) as CSSProperties

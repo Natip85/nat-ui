@@ -63,6 +63,11 @@ meaning and there is no text for a screen reader to announce.
 Every nat-ui component takes an `animation` prop. It is independent of
 `variant` and `size`, so appearance and feel vary separately.
 
+Each preset sets both how long a press takes and how deep it goes, because
+overshoot is a proportion of the distance travelled — a spring that bounces
+half as far again as a 4% press moves less than a pixel and reads as no bounce
+at all.
+
 <ComponentPreview name='button-animation' />
 
 ## API Reference
@@ -72,6 +77,13 @@ Every nat-ui component takes an `animation` prop. It is independent of
 | `variant`   | `default`, `destructive`, `outline`, `secondary`, `ghost`, `link` | `default` |
 | `size`      | `sm`, `default`, `lg`, `icon`                                     | `default` |
 | `animation` | `smooth`, `snappy`, `bouncy`, `none`                              | `snappy`  |
+
+| Preset   | Settles in | Presses to | Overshoot  |
+| -------- | ---------- | ---------- | ---------- |
+| `smooth` | 387ms      | 0.96       | none       |
+| `snappy` | 200ms      | 0.94       | slight     |
+| `bouncy` | 960ms      | 0.88       | pronounced |
+| `none`   | instant    | 1          | none       |
 
 Every other prop is forwarded to Base UI's `Button`. `className` is narrowed to
 a string: Base UI also accepts a function of the component's state, but the
@@ -90,12 +102,12 @@ import {buttonVariants} from '@/components/ui/button-variants'
 
 `buttonVariants` carries the press scale but not the timing that turns it into
 a press rather than a jump, since that timing is what the `animation` prop
-picks. Ask for a preset directly to match it:
+picks. `pressStyle` supplies both:
 
 ```tsx
 import {buttonVariants} from '@/components/ui/button-variants'
-import {transitionStyle} from '@/lib/motion'
-;<Link href='/docs' className={buttonVariants()} style={transitionStyle('snappy')}>
+import {pressStyle} from '@/lib/motion'
+;<Link href='/docs' className={buttonVariants()} style={pressStyle('snappy')}>
   Get started
 </Link>
 ```

@@ -4,7 +4,7 @@ import {Button as BaseButton} from '@base-ui/react/button'
 import type {VariantProps} from 'class-variance-authority'
 import type {ComponentProps} from 'react'
 import {buttonVariants} from '@/components/ui/button-variants'
-import {type AnimationPreset, DEFAULT_PRESET, transitionStyle} from '@/lib/motion'
+import {type AnimationPreset, DEFAULT_PRESET, pressStyle} from '@/lib/motion'
 import {useResolvedPreset} from '@/lib/use-motion'
 import {cn} from '@/lib/utils'
 
@@ -30,12 +30,12 @@ export function Button({
 }: ButtonProps) {
   const preset = useResolvedPreset(animation)
   // Spread last so a caller's own style wins, the same way `className` does.
-  const transition = transitionStyle(preset, 'transform, background-color, color')
+  const press = pressStyle(preset)
 
   return (
     <BaseButton
       className={cn(buttonVariants({variant, size, className}))}
-      style={{...transition, ...style}}
+      style={{...press, ...style}}
       {...props}
     />
   )
