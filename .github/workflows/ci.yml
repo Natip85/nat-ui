@@ -222,7 +222,17 @@ jobs:
       - run: pnpm dlx shadcn@latest init -b base -p nova --yes
         working-directory: ${{ runner.temp }}/consumer
 
-      - run: pnpm dlx shadcn@latest add http://localhost:8420/button.json --yes
+      # Every item that was built, not a list kept by hand. This job is also
+      # what proves no component reads a theme token shadcn's theme lacks, and
+      # a component nobody remembered to name here would go unproven -- which
+      # is the failure mode of a guard that only covers what it is told about.
+      - run: |
+          shopt -s nullglob
+          documents=("$GITHUB_WORKSPACE"/s/*.json)
+          test "${#documents[@]}" -gt 0 || { echo 'No items were built into s/.'; exit 1; }
+          for document in "${documents[@]}"; do
+            pnpm dlx shadcn@latest add "http://localhost:8420/$(basename "$document")" --yes
+          done
         working-directory: ${{ runner.temp }}/consumer
 
       # Both files of the item, and the lib item it depends on, must have
