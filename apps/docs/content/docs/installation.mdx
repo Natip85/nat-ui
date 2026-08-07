@@ -26,9 +26,12 @@ To install by name instead, add the namespace to your `components.json` once:
 npx shadcn@latest add @nat-ui/button
 ```
 
-Components arrive as source in your project either way. The nat-ui CLI remains
-the better option for a new project, where `init` writing theme tokens and
-`components.json` is a service rather than an intrusion.
+Components arrive as source in your project either way. Note that installing
+one still brings in Base UI (`@base-ui/react`) — a second primitives library
+if your project is built on Radix — and assumes your theme defines Tailwind
+v4's tokens. The nat-ui CLI remains the better option for a new project, where
+`init` writing theme tokens and `components.json` is a service rather than an
+intrusion.
 
 ## With the nat-ui CLI
 
