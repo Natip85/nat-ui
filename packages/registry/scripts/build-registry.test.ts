@@ -1,6 +1,7 @@
 import {join} from 'node:path'
 import type {RegistryItem} from '@nat-ui/schema'
 import {describe, expect, it, test} from 'vitest'
+import type {RegistrySourceItem} from '../src/index'
 import {
   assertResolvableGraph,
   byName,
@@ -11,15 +12,18 @@ import {
   packageNameOf,
   registryDependencyCycles,
   serialize,
+  shadcnOutputDirectories,
   toIndex,
   toPayload,
   undeclaredDependencies,
   unsupportedAliasImports,
 } from './build-registry'
 
-const button: RegistryItem = {
+const button: RegistrySourceItem = {
   name: 'button',
   type: 'ui',
+  title: 'Button',
+  description: 'A button.',
   dependencies: ['@base-ui/react'],
   files: [{path: 'components/ui/button.tsx', type: 'ui'}],
 }
@@ -98,8 +102,8 @@ describe('toPayload', () => {
   })
 
   test('refuses an item the CLI could not install', () => {
-    const asHook: RegistryItem = {...button, type: 'hook'}
-    const fileAsComponent: RegistryItem = {
+    const asHook: RegistrySourceItem = {...button, type: 'hook'}
+    const fileAsComponent: RegistrySourceItem = {
       ...button,
       files: [{path: 'components/thing.tsx', type: 'component'}],
     }
@@ -114,6 +118,26 @@ describe('toPayload', () => {
     expect(() => toPayload(button, reading("import x from '@/hooks/use-x'\n"))).toThrow(
       /@\/hooks\/use-x/,
     )
+  })
+
+  test('omits the shadcn-only metadata from the nat-ui document', () => {
+    // `registryItemPayloadSchema` is a strict object baked into every published
+    // CLI. A document carrying `title` fails validation in the field, on a
+    // version of the CLI we can no longer change.
+    const payload = toPayload(
+      {
+        name: 'thing',
+        type: 'ui',
+        title: 'Thing',
+        description: 'A thing.',
+        files: [{path: 'components/ui/thing.tsx', type: 'ui'}],
+      },
+      () => 'export const Thing = () => null\n',
+    )
+
+    expect(payload).not.toHaveProperty('title')
+    expect(payload).not.toHaveProperty('description')
+    expect(payload.name).toBe('thing')
   })
 })
 
@@ -156,6 +180,15 @@ describe('outputDirectories', () => {
       join('/repo', 'r'),
       join('/repo', 'apps', 'docs', 'public', 'r'),
     ])
+  })
+})
+
+describe('shadcnOutputDirectories', () => {
+  test('writes the committed tree and the served one', () => {
+    const [committed, served] = shadcnOutputDirectories('/repo/packages/registry')
+
+    expect(committed).toBe(join('/repo', 's'))
+    expect(served).toBe(join('/repo', 'apps', 'docs', 'public', 's'))
   })
 })
 
@@ -325,9 +358,11 @@ describe('assertResolvableGraph', () => {
 
 describe('toPayload dependency validation', () => {
   it('refuses a file importing a package the item does not declare', () => {
-    const item: RegistryItem = {
+    const item: RegistrySourceItem = {
       name: 'input',
       type: 'ui',
+      title: 'Input',
+      description: 'An input.',
       dependencies: ['@base-ui/react'],
       files: [{path: 'components/ui/input.tsx', type: 'ui'}],
     }
@@ -337,9 +372,11 @@ describe('toPayload dependency validation', () => {
   })
 
   it('accepts a file whose imports are all declared', () => {
-    const item: RegistryItem = {
+    const item: RegistrySourceItem = {
       name: 'input',
       type: 'ui',
+      title: 'Input',
+      description: 'An input.',
       dependencies: ['@base-ui/react'],
       files: [{path: 'components/ui/input.tsx', type: 'ui'}],
     }
@@ -349,9 +386,11 @@ describe('toPayload dependency validation', () => {
   })
 
   it('refuses a file dynamically importing a package the item does not declare', () => {
-    const item: RegistryItem = {
+    const item: RegistrySourceItem = {
       name: 'input',
       type: 'ui',
+      title: 'Input',
+      description: 'An input.',
       dependencies: ['@base-ui/react'],
       files: [{path: 'components/ui/input.tsx', type: 'ui'}],
     }
@@ -362,9 +401,11 @@ describe('toPayload dependency validation', () => {
 })
 
 describe('lib items', () => {
-  const libItem: RegistryItem = {
+  const libItem: RegistrySourceItem = {
     name: 'motion',
     type: 'lib',
+    title: 'Motion',
+    description: 'Spring presets.',
     files: [{path: 'lib/motion.ts', type: 'lib'}],
   }
 
@@ -377,9 +418,11 @@ describe('lib items', () => {
   })
 
   test('refuses an item type the CLI cannot install', () => {
-    const hookItem: RegistryItem = {
+    const hookItem: RegistrySourceItem = {
       name: 'use-thing',
       type: 'hook',
+      title: 'Use Thing',
+      description: 'A hook.',
       files: [{path: 'hooks/use-thing.ts', type: 'hook'}],
     }
 
@@ -387,9 +430,11 @@ describe('lib items', () => {
   })
 
   test('refuses a file type the CLI cannot install', () => {
-    const mixed: RegistryItem = {
+    const mixed: RegistrySourceItem = {
       name: 'thing',
       type: 'ui',
+      title: 'Thing',
+      description: 'A thing.',
       files: [{path: 'components/thing.tsx', type: 'component'}],
     }
 
