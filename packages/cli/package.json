@@ -1,6 +1,6 @@
 {
   "name": "@nat-ui/cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Add nat-ui components to your project.",
   "type": "module",
   "license": "MIT",
