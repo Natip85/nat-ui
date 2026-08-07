@@ -167,7 +167,7 @@ Pass it through in the `add` branch, beside `overwrite`:
 Add the line to the `help` string, between `--overwrite` and `--registry` so the options stay in the order they are explained:
 
 ```
-        --all            Add every component in the registry
+        --all            Add every item in the registry, libraries included
 ```
 
 `init` already refuses `--overwrite` and `--registry`; extend that guard to `--all` so a stray flag is an error rather than silently ignored:
@@ -294,14 +294,14 @@ npx @nat-ui/cli@latest add --all
 
 ## Options
 
-| Option             | Effect                              |
-| ------------------ | ----------------------------------- |
-| `-y`, `--yes`      | Accept every default without asking |
-| `--overwrite`      | Replace files that already exist    |
-| `--all`            | Add every component in the registry |
-| `--registry <url>` | Fetch from a different registry     |
-| `-v`, `--version`  | Print the version                   |
-| `-h`, `--help`     | Show usage                          |
+| Option             | Effect                                             |
+| ------------------ | -------------------------------------------------- |
+| `-y`, `--yes`      | Accept every default without asking                |
+| `--overwrite`      | Replace files that already exist                   |
+| `--all`            | Add every item in the registry, libraries included |
+| `--registry <url>` | Fetch from a different registry                    |
+| `-v`, `--version`  | Print the version                                  |
+| `-h`, `--help`     | Show usage                                         |
 
 `--yes` and `--overwrite` are not two ways of saying the same thing. `--yes`
 accepts defaults, and keeping the file you already have is the default, so

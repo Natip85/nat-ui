@@ -20,8 +20,8 @@ describe('help', () => {
     expect(help).toContain('-y, --yes')
   })
 
-  test('documents --all', () => {
-    expect(help).toMatch(/--all/)
+  test('documents --all as covering libraries, not only components', () => {
+    expect(help).toContain('--all            Add every item in the registry, libraries included')
   })
 })
 
@@ -105,13 +105,13 @@ describe('run', () => {
 
   test('add --all reaches the command with all set', async () => {
     // The flag has to survive parseArgs and arrive as an option, which is the
-    // one thing a test of `add` itself cannot cover.
+    // one thing a test of `add` itself cannot cover. Pairing it with a name is
+    // what makes that observable without a registry: only `all` arriving true
+    // produces this refusal, and it is refused before `add` reaches the network.
     const lines: string[] = []
 
-    expect(
-      await run(['add', '--all', '--registry', 'https://r.test'], (message) => lines.push(message)),
-    ).not.toBe(0)
-    expect(lines.join('\n')).not.toMatch(/Unknown option/)
+    expect(await run(['add', '--all', 'button'], (message) => lines.push(message))).toBe(1)
+    expect(lines.join('\n')).toBe('Pass either --all or component names, not both.')
   })
 
   test('dispatches a bare init with no stray positionals to the init command', async () => {
