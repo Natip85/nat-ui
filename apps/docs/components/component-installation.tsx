@@ -25,10 +25,11 @@ export async function ComponentInstallation({item}: {item: string}) {
 
   return (
     <>
-      {/* The nat-ui and manual routes still don't stand alone: the files below
-          import `cn` from the utils alias and are styled against the theme
-          tokens, both of which nat-ui's `init` writes. The shadcn route needs
-          neither statement — `shadcn init` writes the same two things itself. */}
+      {/* Naming the precondition is still the difference between a route to the
+          same result and one that does not compile, so it cannot be dropped now
+          that a route exists without it. The shadcn route is the exemption
+          rather than the rule: `shadcn init` writes the `cn` helper and the
+          theme tokens itself, which is the whole reason it leads. */}
       <p>
         Install with whichever CLI your project already has. The{' '}
         <Link href='/docs/installation'>nat-ui CLI</Link> and manual routes assume{' '}
