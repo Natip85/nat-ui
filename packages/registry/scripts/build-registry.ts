@@ -148,17 +148,16 @@ export const toPayload = (
     return {...file, content}
   })
 
-  // Picked one key at a time rather than spread: `item` now carries shadcn's
-  // title and description, and the payload schema is strict, so a spread would
-  // fail the build the moment metadata was added.
+  // Dropped by name rather than picked one key at a time: `item` carries
+  // shadcn's title and description on top of everything `RegistryItem`
+  // already has, so destructuring those two away and spreading the rest
+  // forwards a future `RegistryItem` key instead of silently losing it, while
+  // the strict payload schema still fails loudly on a shadcn-only addition.
+  const {title: _title, description: _description, ...natUi} = item
+
   return registryItemPayloadSchema.parse({
     schemaVersion: REGISTRY_SCHEMA_VERSION,
-    name: item.name,
-    type: item.type,
-    ...(item.dependencies === undefined ? {} : {dependencies: item.dependencies}),
-    ...(item.registryDependencies === undefined
-      ? {}
-      : {registryDependencies: item.registryDependencies}),
+    ...natUi,
     files,
   })
 }
@@ -337,7 +336,9 @@ const main = async (): Promise<void> => {
     }
   }
 
-  console.log(`Wrote ${String(payloads.length)} registry item(s) to r/ and s/.`)
+  console.log(
+    `Wrote ${String(payloads.length)} registry item(s) to r/ and s/, s/ cross-references pointing at ${shadcnBaseUrl}.`,
+  )
 }
 
 // Only run when invoked as a script, so the tests above can import the pure
