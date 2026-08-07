@@ -603,7 +603,7 @@ smoke-shadcn:
 
     # shadcn's own init, not nat-ui's. The whole point of this job is the path
     # taken by someone who has never heard of the nat-ui CLI.
-    - run: pnpm dlx shadcn@latest init --base-color neutral --yes
+    - run: pnpm dlx shadcn@latest init -b base -p nova --yes
       working-directory: ${{ runner.temp }}/consumer
 
     - run: pnpm dlx shadcn@latest add http://localhost:8420/button.json --yes
@@ -646,7 +646,7 @@ npx --yes serve s --listen 8420 &
 cd "$(mktemp -d)"
 pnpm --package=create-next-app@latest dlx create-next-app consumer --ts --tailwind --app --no-eslint --no-src-dir --import-alias "@/*" --use-pnpm --yes
 cd consumer
-pnpm dlx shadcn@latest init --base-color neutral --yes
+pnpm dlx shadcn@latest init -b base -p nova --yes
 pnpm dlx shadcn@latest add http://localhost:8420/button.json --yes
 ls components/ui lib
 ```
