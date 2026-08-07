@@ -14,3 +14,9 @@ Cross-references between items are absolute URLs rather than namespaced names,
 because a namespaced reference only resolves once the user has configured the
 namespace in `components.json`, and the install path most people take is a bare
 URL with no configuration at all.
+
+The `destructive` button variant now uses `text-white` instead of
+`text-destructive-foreground`: shadcn's own theme defines `--destructive` but
+not `--destructive-foreground`, so the label rendered with no foreground
+colour in a shadcn project. nat-ui's own theme presets define that variable to
+essentially the same white, so this is not a visible change there.
