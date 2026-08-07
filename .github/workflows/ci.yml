@@ -247,3 +247,12 @@ jobs:
 
       - run: pnpm build
         working-directory: ${{ runner.temp }}/consumer
+
+      # A browser resolves an undefined custom property to nothing rather than
+      # erroring, so a component reading a theme token shadcn's default theme
+      # does not define builds clean here and renders wrong -- silently --
+      # everywhere else. Runs from the checkout, against the consumer's build
+      # output, because the bug only exists once Tailwind has compiled a class
+      # into a `var()` declaration.
+      - run: pnpm --filter @nat-ui/registry verify-theme-tokens
+          ${{ runner.temp }}/consumer/.next
