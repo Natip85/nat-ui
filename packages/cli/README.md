@@ -20,6 +20,8 @@ detected aliases, creates the `cn` helper, adds the theme variables, and install
 `add` reads that config, so components land where you already keep things with their imports
 rewritten to your aliases. Dependencies come with them.
 
+To take everything the registry has rather than naming components one at a time:
+
 ```bash
 npx @nat-ui/cli@latest add --all
 ```
