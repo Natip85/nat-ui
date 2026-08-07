@@ -15,6 +15,17 @@ Documentation, with live examples for every component:
 
 ## Quick start
 
+### Already using shadcn?
+
+You don't need this CLI. Every component is published in shadcn's registry
+format as well:
+
+```bash
+npx shadcn@latest add https://nat-ui-delta.vercel.app/s/button.json
+```
+
+### With the nat-ui CLI
+
 ```bash
 pnpm dlx @nat-ui/cli@latest init
 npx @nat-ui/cli@latest add button
