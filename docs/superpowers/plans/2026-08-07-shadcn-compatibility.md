@@ -193,6 +193,7 @@ rather than nat-ui shipping its own.
 Create `packages/registry/scripts/shadcn.test.ts`:
 
 ```ts
+import type {RegistryItemPayload} from '@nat-ui/schema'
 import {describe, expect, test} from 'vitest'
 import type {RegistrySourceItem} from '../src/index'
 import {DEFAULT_SHADCN_BASE_URL, SHADCN_SCHEMA_URL, shadcnTypeOf, toShadcnItem} from './shadcn'
@@ -207,14 +208,17 @@ const source: RegistrySourceItem = {
   files: [{path: 'components/ui/button.tsx', type: 'ui'}],
 }
 
-const payload = {
+// Annotated rather than `as const`: `registryItemPayloadSchema` builds `files`
+// with `z.array(...)`, so the inferred type has mutable arrays and a readonly
+// tuple is not assignable to it.
+const payload: RegistryItemPayload = {
   schemaVersion: '1',
   name: 'button',
   type: 'ui',
   dependencies: ['@base-ui/react'],
   registryDependencies: ['motion'],
   files: [{path: 'components/ui/button.tsx', type: 'ui', content: 'export const Button = 1\n'}],
-} as const
+}
 
 const known = new Set(['button', 'motion'])
 
@@ -277,12 +281,12 @@ describe('toShadcnItem', () => {
       description: 'Springs.',
       files: [{path: 'lib/motion.ts', type: 'lib'}],
     }
-    const barePayload = {
+    const barePayload: RegistryItemPayload = {
       schemaVersion: '1',
       name: 'motion',
       type: 'lib',
       files: [{path: 'lib/motion.ts', type: 'lib', content: 'export const x = 1\n'}],
-    } as const
+    }
 
     const item = toShadcnItem(bare, barePayload, DEFAULT_SHADCN_BASE_URL, known)
 
@@ -384,7 +388,7 @@ export const toShadcnItem = (
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `pnpm vitest run packages/registry/scripts/shadcn.test.ts`
-Expected: PASS, 4 tests.
+Expected: PASS, 6 tests — two for `shadcnTypeOf` and four for `toShadcnItem`.
 
 - [ ] **Step 5: Commit**
 
